@@ -26,7 +26,8 @@ async def main():
 
     engine = AzureSpecSyncEngine(
         specs_repo_path=args.specs_path,
-        mazure_root=Path.cwd()
+        mazure_root=Path.cwd(),
+        tasks_file_path=args.update_tasks
     )
 
     changes = await engine.sync()
@@ -50,38 +51,6 @@ async def main():
 
     with open(args.output, "w") as f:
         json.dump(report, f, indent=2, cls=DateTimeEncoder)
-
-    if args.update_tasks and changes:
-        tasks = []
-        if args.update_tasks.exists():
-            try:
-                with open(args.update_tasks) as f:
-                    tasks = json.load(f)
-            except json.JSONDecodeError:
-                pass
-
-        # Map existing tasks by ID
-        task_map = {t.get('id'): t for t in tasks}
-
-        for c in changes:
-            task_id = f"{c.provider}_{c.resource_type}_{c.api_version}"
-            if task_id not in task_map or task_map[task_id].get('status') == 'completed':
-                new_task = {
-                    "id": task_id,
-                    "provider": c.provider,
-                    "resource_type": c.resource_type,
-                    "api_version": c.api_version,
-                    "spec_path": str(c.spec_path),
-                    "status": "pending",
-                    "created_at": datetime.utcnow().isoformat()
-                }
-                if task_id in task_map:
-                    tasks.remove(task_map[task_id])
-                tasks.append(new_task)
-
-        args.update_tasks.parent.mkdir(parents=True, exist_ok=True)
-        with open(args.update_tasks, "w") as f:
-            json.dump(tasks, f, indent=2)
 
     print(f"Sync complete. Found {len(changes)} changes. Report saved to {args.output}")
 
