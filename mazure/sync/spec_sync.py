@@ -118,7 +118,7 @@ class AzureSpecSyncEngine:
         """Check if file is an OpenAPI specification"""
         return (
             path.endswith('.json') and
-            '/specification/' in path and
+            'specification/' in path and
             ('stable' in path or 'preview' in path)
         )
 

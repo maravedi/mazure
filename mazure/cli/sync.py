@@ -1,5 +1,6 @@
 import typer
 from pathlib import Path
+from typing import Optional
 import asyncio
 
 app = typer.Typer()
@@ -78,16 +79,50 @@ def coverage():
 
     asyncio.run(run())
 
+def _find_spec_path(provider: str, resource_type: str, api_version: str) -> Optional[Path]:
+    """Find spec file in default location"""
+    specs_root = Path("specs/azure-rest-api-specs/specification")
+    if not specs_root.exists():
+        return None
+
+    # Search for file named {resource_type}.json
+    candidates = list(specs_root.rglob(f"{resource_type}.json"))
+
+    matches = []
+    for candidate in candidates:
+        parts = candidate.parts
+        if api_version in parts:
+             provider_short = provider.split('.')[-1].lower()
+             if provider in str(candidate) or provider_short in str(candidate).lower():
+                 matches.append(candidate)
+
+    if not matches:
+        return None
+
+    exact_matches = [m for m in matches if provider in str(m)]
+    if exact_matches:
+        return exact_matches[0]
+
+    return matches[0]
+
 @app.command()
 def generate(
     provider: str = typer.Argument(..., help="Provider namespace"),
     resource_type: str = typer.Argument(..., help="Resource type"),
     api_version: str = typer.Argument(..., help="API version"),
-    spec_path: Path = typer.Option(..., help="Path to the spec file")
+    spec_path: Path = typer.Option(None, help="Path to the spec file")
 ):
     """Generate service implementation from specification"""
 
     from mazure.sync.codegen import MazureCodeGenerator
+
+    if spec_path is None:
+        typer.echo("Searching for spec file...")
+        spec_path = _find_spec_path(provider, resource_type, api_version)
+        if not spec_path:
+            typer.echo(f"Error: Could not find spec file for {provider}/{resource_type} version {api_version}")
+            raise typer.Exit(code=1)
+        typer.echo(f"Found spec file: {spec_path}")
 
     typer.echo(f"🔄 Generating {provider}/{resource_type} (v{api_version})...")
 
