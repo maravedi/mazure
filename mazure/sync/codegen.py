@@ -88,6 +88,12 @@ class MazureCodeGenerator:
         # Adjusted path
         routes_dir = self.mazure_root / "mazure" / "api"
         routes_dir.mkdir(exist_ok=True, parents=True)
+
+        # Ensure __init__.py exists to make it a package
+        init_file = routes_dir / "__init__.py"
+        if not init_file.exists():
+            init_file.touch()
+
         # Use resource_type in filename to avoid overwrites
         routes_file = routes_dir / f"{provider.lower().replace('.', '_')}_{resource_type.lower()}.py"
         with open(routes_file, 'w') as f:
