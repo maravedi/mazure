@@ -1,0 +1,16 @@
+"""
+Pydantic schemas for {{ provider }}/{{ resource_type }}
+Generated: {{ timestamp }}
+"""
+
+from typing import Dict, Any, Optional, List, Union
+from pydantic import BaseModel
+
+{% for name, schema in schemas.items() %}
+class {{ name | replace('.', '') | replace('-', '') }}(BaseModel):
+    """{{ schema.get('description', name) }}"""
+    pass
+    # Properties generation skipped for simplicity in this MVP
+    # Ideally we would iterate over properties and map types
+
+{% endfor %}

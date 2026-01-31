@@ -1,0 +1,36 @@
+"""
+API Routes for {{ provider }}/{{ resource_type }}
+Generated: {{ timestamp }}
+"""
+
+from flask import Blueprint, request, jsonify
+from mazure.core.state import StateManager
+from mazure.services.{{ service_package }}.{{ resource_type.lower() }} import {{ resource_type | title | replace('_', '') }}Service
+import asyncio
+
+bp = Blueprint('{{ resource_type.lower() }}', __name__)
+state = StateManager()
+service = {{ resource_type | title | replace('_', '') }}Service(state)
+
+def run_async(coro):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
+
+{% for op in operations %}
+# Operation: {{ op.operation_id }}
+# Path: {{ op.path }}
+@bp.route('{{ op.path | replace("{", "<") | replace("}", ">") }}', methods=['{{ op.method }}'])
+def {{ op.operation_id | lower | replace('.', '_') | replace('-', '_') }}(**kwargs):
+    # This is a stub implementation
+    # Arguments from path are in kwargs
+
+    # We would need to map kwargs to service arguments here
+    # subscriptionId -> subscription_id
+    # resourceGroupName -> resource_group
+
+    return jsonify({"message": "Generated route for {{ op.operation_id }}"}), 501
+{% endfor %}
