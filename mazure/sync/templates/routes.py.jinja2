@@ -32,5 +32,20 @@ def {{ op.operation_id | lower | replace('.', '_') | replace('-', '_') }}(**kwar
     # subscriptionId -> subscription_id
     # resourceGroupName -> resource_group
 
-    return jsonify({"message": "Generated route for {{ op.operation_id }}"}), 501
+    # Example of how to call the async service:
+    # try:
+    #     result = run_async(service.{{ op.operation_id | lower | replace('.', '_') | replace('-', '_') }}(
+    #         subscription_id=kwargs.get('subscriptionId'),
+    #         resource_group=kwargs.get('resourceGroupName'),
+    #         resource_name=kwargs.get('resourceName'),
+    #         parameters=request.get_json(silent=True) or {},
+    #         **kwargs
+    #     ))
+    #     return jsonify(result)
+    # except NotImplementedError:
+    #     return jsonify({"error": "Not implemented"}), 501
+    # except Exception as e:
+    #     return jsonify({"error": str(e)}), 500
+
+    return jsonify({"message": "Generated route for {{ op.operation_id }}", "path_params": kwargs}), 501
 {% endfor %}
