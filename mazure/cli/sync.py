@@ -43,7 +43,12 @@ def sync(
 
             if auto_generate:
                 typer.echo("\n🔄 Generating code updates...")
-                # Trigger code generation
+                from mazure.sync.codegen_command import process_pending_tasks
+                await process_pending_tasks(
+                    tasks_file=sync_engine.tasks_file_path,
+                    specs_path=specs_path,
+                    mazure_root=Path.cwd()
+                )
         else:
             typer.echo("✓ No changes detected")
 
