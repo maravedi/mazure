@@ -41,7 +41,7 @@ class AzureSpecSyncEngine:
         self.specs_repo_path = specs_repo_path
         self.mazure_root = mazure_root
         self.github_token = github_token
-        self.tasks_file_path = tasks_file_path or (mazure_root / "sync" / "pending_updates.json")
+        self.tasks_file_path = tasks_file_path or (mazure_root / "mazure" / "sync" / "pending_updates.json")
         self.repo: Optional[git.Repo] = None
         self.change_log: List[SpecChange] = []
 
