@@ -47,6 +47,11 @@ class MazureCodeGenerator:
         # Step 5: Write files
         output_dir = await self._get_service_output_dir(provider)
 
+        # Ensure __init__.py exists to make it a package
+        init_file = output_dir / "__init__.py"
+        if not init_file.exists():
+            init_file.touch()
+
         service_file = output_dir / f"{resource_type.lower()}.py"
         with open(service_file, 'w') as f:
             f.write(service_code)
@@ -54,6 +59,12 @@ class MazureCodeGenerator:
         # Handle Schemas
         schemas_dir = self.mazure_root / "mazure" / "schemas"
         schemas_dir.mkdir(exist_ok=True, parents=True)
+
+        # Ensure __init__.py exists to make it a package
+        init_file = schemas_dir / "__init__.py"
+        if not init_file.exists():
+            init_file.touch()
+
         schemas_file = schemas_dir / f"{provider.lower().replace('.', '_')}.py"
 
         existing_schemas = set()
