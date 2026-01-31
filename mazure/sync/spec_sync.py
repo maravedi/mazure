@@ -35,11 +35,13 @@ class AzureSpecSyncEngine:
         self,
         specs_repo_path: Path,
         mazure_root: Path,
-        github_token: Optional[str] = None
+        github_token: Optional[str] = None,
+        tasks_file_path: Optional[Path] = None
     ):
         self.specs_repo_path = specs_repo_path
         self.mazure_root = mazure_root
         self.github_token = github_token
+        self.tasks_file_path = tasks_file_path or (mazure_root / "sync" / "pending_updates.json")
         self.repo: Optional[git.Repo] = None
         self.change_log: List[SpecChange] = []
 
@@ -170,7 +172,7 @@ class AzureSpecSyncEngine:
     async def _generate_update_tasks(self, changes: List[SpecChange]):
         """Generate code update tasks based on specification changes"""
 
-        tasks_file = self.mazure_root / "sync" / "pending_updates.json"
+        tasks_file = self.tasks_file_path
         tasks_file.parent.mkdir(parents=True, exist_ok=True)
 
         tasks = []

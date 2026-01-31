@@ -76,5 +76,5 @@ class TestMazureCodeGenerator(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(schema_file.exists())
 
         # Verify routes file created
-        routes_file = self.mazure_root / "mazure" / "api" / "microsoft_test.py"
+        routes_file = self.mazure_root / "mazure" / "api" / "microsoft_test_tests.py"
         self.assertTrue(routes_file.exists())

@@ -1,8 +1,9 @@
 # mazure/sync/codegen.py
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Set
 import subprocess
 import json
+import re
 from jinja2 import Environment, FileSystemLoader
 from datetime import datetime
 
@@ -43,16 +44,6 @@ class MazureCodeGenerator:
             provider, resource_type, api_version, code_model
         )
 
-        # Step 3: Generate Pydantic schemas
-        schemas_code = await self._generate_schemas(
-            provider, resource_type, api_version, code_model
-        )
-
-        # Step 4: Generate API route handlers
-        routes_code = await self._generate_routes(
-            provider, resource_type, api_version, code_model
-        )
-
         # Step 5: Write files
         output_dir = await self._get_service_output_dir(provider)
 
@@ -60,21 +51,45 @@ class MazureCodeGenerator:
         with open(service_file, 'w') as f:
             f.write(service_code)
 
-        # Adjusted path
+        # Handle Schemas
         schemas_dir = self.mazure_root / "mazure" / "schemas"
         schemas_dir.mkdir(exist_ok=True, parents=True)
         schemas_file = schemas_dir / f"{provider.lower().replace('.', '_')}.py"
+
+        existing_schemas = set()
+        include_header = True
+
+        if schemas_file.exists():
+            content = schemas_file.read_text()
+            # Extract existing class names
+            # Regex looks for: class ClassName(BaseModel):
+            matches = re.findall(r'class\s+(\w+)\s*\(BaseModel\):', content)
+            existing_schemas = set(matches)
+            include_header = False
+
+        # Step 3: Generate Pydantic schemas
+        schemas_code = await self._generate_schemas(
+            provider, resource_type, api_version, code_model,
+            include_header=include_header,
+            existing_schemas=existing_schemas
+        )
 
         # Append or create schemas file
         mode = 'a' if schemas_file.exists() else 'w'
         with open(schemas_file, mode) as f:
             f.write(schemas_code)
 
+        # Step 4: Generate API route handlers
+        routes_code = await self._generate_routes(
+            provider, resource_type, api_version, code_model
+        )
+
         # Generate routes
         # Adjusted path
         routes_dir = self.mazure_root / "mazure" / "api"
         routes_dir.mkdir(exist_ok=True, parents=True)
-        routes_file = routes_dir / f"{provider.lower().replace('.', '_')}.py"
+        # Use resource_type in filename to avoid overwrites
+        routes_file = routes_dir / f"{provider.lower().replace('.', '_')}_{resource_type.lower()}.py"
         with open(routes_file, 'w') as f:
             f.write(routes_code)
 
@@ -218,18 +233,32 @@ class MazureCodeGenerator:
         provider: str,
         resource_type: str,
         api_version: str,
-        code_model: Dict[str, Any]
+        code_model: Dict[str, Any],
+        include_header: bool = True,
+        existing_schemas: Set[str] = None
     ) -> str:
         """Generate Pydantic schema models"""
+        if existing_schemas is None:
+            existing_schemas = set()
 
         template = self.jinja_env.get_template('schemas.py.jinja2')
 
-        schemas = code_model.get('schemas', {})
+        all_schemas = code_model.get('schemas', {})
+        # Filter out schemas that already exist
+        schemas = {
+            k: v for k, v in all_schemas.items()
+            if k.replace('.', '').replace('-', '') not in existing_schemas
+        }
+
+        # If no new schemas and no header needed, return empty string
+        if not schemas and not include_header:
+            return ""
 
         return template.render(
             provider=provider,
             resource_type=resource_type,
             schemas=schemas,
+            include_header=include_header,
             timestamp=datetime.utcnow().isoformat()
         )
 
