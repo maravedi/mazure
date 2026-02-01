@@ -330,10 +330,9 @@ def generate(
     provider: str = typer.Argument(..., help="Provider namespace"),
     resource_type: str = typer.Argument(..., help="Resource type"),
     api_version: str = typer.Argument(..., help="API version"),
-    spec_path: Path = typer.Option(None, help="Path to the spec file")
+    spec_path: Optional[Path] = typer.Option(None, help="Path to the spec file"),
 ):
     """Generate service implementation from specification"""
-
     from mazure.sync.codegen import MazureCodeGenerator
 
     if spec_path is None:
@@ -361,6 +360,31 @@ def generate(
 
     asyncio.run(run())
     typer.echo("[+] Service generated successfully")
+
+@app.command()
+def scenario(
+    template: str = typer.Argument(..., help="Template name to generate environment from (e.g. compliance/cmmc)"),
+    apply: bool = typer.Option(False, help="Apply the template directly to the running server"),
+    output: Optional[Path] = typer.Option(None, help="Output path for generated script")
+):
+    """Generate environment state from template"""
+    from mazure.scenarios.generator import ScenarioGenerator
+    import mazure
+
+    mazure_root = Path(mazure.__file__).parent.parent
+    try:
+        generator = ScenarioGenerator(template, mazure_root)
+
+        if apply:
+            generator.apply()
+            typer.echo("[+] Template applied successfully")
+        else:
+            out = generator.generate_script(output)
+            typer.echo(f"[+] Script generated at: {out}")
+
+    except Exception as e:
+        typer.echo(f"Error: {e}")
+        raise typer.Exit(code=1)
 
 @app.command()
 def compatibility(
