@@ -16,6 +16,7 @@ setup(
     install_requires=requirements(),
     entry_points={
         'console_scripts': [
+            'mazure=mazure.cli.sync:app',
             'mazure-cli=mazure.cli.sync:app',
         ],
     },

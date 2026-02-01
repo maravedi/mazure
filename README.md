@@ -47,6 +47,19 @@ mazure-cli generate Microsoft.Compute virtualMachines 2024-03-01
 Options:
 - `--spec-path`: Specific path to the spec file. If not provided, it searches in the default specs directory.
 
+#### List
+List available services, providers, and resources from synced specs to find values for the `generate` command.
+
+```bash
+mazure list [SERVICE] [PROVIDER] [RESOURCE]
+```
+
+Examples:
+- `mazure list` (list all services)
+- `mazure list compute` (list providers in compute)
+- `mazure list compute Microsoft.Compute` (list resources in provider)
+- `mazure list compute Microsoft.Compute virtualMachines` (list versions)
+
 #### Coverage
 Show the current API coverage report.
 
@@ -54,16 +67,61 @@ Show the current API coverage report.
 mazure-cli coverage
 ```
 
+#### Serve
+Start the Mazure mock server to emulate Azure APIs locally.
+
+```bash
+mazure serve
+```
+
+Options:
+- `--port`: Port to run the server on (default: 5050).
+- `--host`: Host to run the server on (default: 0.0.0.0).
+
+#### Status
+Show currently generated service implementations and their configured routes.
+
+```bash
+mazure status
+```
+
 #### Compatibility
 Check API version compatibility against the local implementations.
 
 ```bash
-mazure-cli compatibility --specs-path specs/azure-rest-api-specs
+mazure compatibility --specs-path specs/azure-rest-api-specs
 ```
 
 Options:
 - `--specs-path`: Path to the `azure-rest-api-specs` repository.
 - `--output`: Output the report to a JSON file.
+
+## Making REST Calls
+
+Once you have started the mock server using `mazure serve`, you can interact with it using any HTTP client (like `curl`, Postman, or various Azure SDKs).
+
+### Base URL
+The mock server runs by default on `http://localhost:5050`.
+
+### Example: Listing Virtual Machines
+If you have generated the `Microsoft.Compute/virtualMachines` service, you can list VMs using:
+
+```bash
+curl -X GET "http://localhost:5050/subscriptions/GUID/resourceGroups/myRG/providers/Microsoft.Compute/virtualMachines?api-version=2024-07-01"
+```
+
+### Authentication
+The mock server is designed to be a drop-in replacement. It currently accepts any token. You can pass a dummy header if your client requires it:
+```bash
+curl -H "Authorization: Bearer mock-token" ...
+```
+
+### Execution methods
+
+You can execute Mazure using any of the following methods:
+- `mazure <command>` (if installed via pip)
+- `python -m mazure <command>`
+- `mazure-cli <command>`
 
 ## Library Usage
 

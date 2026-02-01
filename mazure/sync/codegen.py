@@ -53,7 +53,7 @@ class MazureCodeGenerator:
             init_file.touch()
 
         service_file = output_dir / f"{resource_type.lower()}.py"
-        with open(service_file, 'w') as f:
+        with open(service_file, 'w', encoding='utf-8') as f:
             f.write(service_code)
 
         # Handle Schemas
@@ -87,7 +87,7 @@ class MazureCodeGenerator:
 
         # Append or create schemas file
         mode = 'a' if schemas_file.exists() else 'w'
-        with open(schemas_file, mode) as f:
+        with open(schemas_file, mode, encoding='utf-8') as f:
             f.write(schemas_code)
 
         # Step 4: Generate API route handlers
@@ -107,7 +107,7 @@ class MazureCodeGenerator:
 
         # Use resource_type in filename to avoid overwrites
         routes_file = routes_dir / f"{provider.lower().replace('.', '_')}_{resource_type.lower()}.py"
-        with open(routes_file, 'w') as f:
+        with open(routes_file, 'w', encoding='utf-8') as f:
             f.write(routes_code)
 
         print(f"Generated service implementation: {service_file}")
@@ -148,7 +148,7 @@ class MazureCodeGenerator:
                 # Load generated code model
                 code_model_file = temp_dir / "code-model-v4.json"
                 if code_model_file.exists():
-                    with open(code_model_file) as f:
+                    with open(code_model_file, encoding='utf-8') as f:
                         return json.load(f)
                 else:
                     # Fallback: parse OpenAPI directly
@@ -161,7 +161,7 @@ class MazureCodeGenerator:
     async def _parse_openapi_directly(self, spec_path: Path) -> Dict[str, Any]:
         """Fallback: Parse OpenAPI spec directly without AutoRest"""
 
-        with open(spec_path) as f:
+        with open(spec_path, encoding='utf-8') as f:
             spec = json.load(f)
 
         # Convert OpenAPI to simplified code model

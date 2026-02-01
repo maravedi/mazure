@@ -1,0 +1,27 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+flask-mongoengine = "==1.0.0"
+mongoengine = "==0.22.1"
+responses = "==0.13.3"
+mongomock = "==3.22.1"
+pymongo = "==3.11.3"
+flask = "==1.1.2"
+gitpython = "*"
+jinja2 = "==2.11.3"
+typer = "<0.4.0"
+pydantic = "*"
+itsdangerous = "==1.1.0"
+werkzeug = "==1.0.1"
+click = "==7.1.2"
+urllib3 = "<2.0.0"
+markupsafe = "==2.0.1"
+requests = "==2.32.5"
+
+[dev-packages]
+
+[requires]
+python_version = "3.12"
