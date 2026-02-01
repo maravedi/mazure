@@ -71,6 +71,11 @@ class TestMazureCodeGenerator(unittest.IsolatedAsyncioTestCase):
         self.assertIn("def create_or_update", content)
         self.assertIn("def get", content)
 
+        # Verify extra params extraction logic
+        self.assertIn("excluded_params = {'properties', 'tags', 'location', 'id', 'name', 'type'}", content)
+        self.assertIn("extra_params = {k: v for k, v in parameters.items() if k not in excluded_params}", content)
+        self.assertIn("**extra_params", content)
+
         # Verify schema file created
         schema_file = self.mazure_root / "mazure" / "schemas" / "microsoft_test.py"
         self.assertTrue(schema_file.exists())

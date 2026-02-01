@@ -38,12 +38,17 @@ class {{ resource_type | title | replace('_', '') }}Service:
             subscription_id, resource_group, self.RESOURCE_TYPE, resource_name
         )
 
+        # Extract other parameters
+        excluded_params = {'properties', 'tags', 'location', 'id', 'name', 'type'}
+        extra_params = {k: v for k, v in parameters.items() if k not in excluded_params}
+
         if existing:
             # Update
             resource = await self.state.update_resource(
                 existing.resource_id,
                 properties=parameters.get('properties'),
-                tags=parameters.get('tags')
+                tags=parameters.get('tags'),
+                **extra_params
             )
             return resource.to_arm_dict()
         else:
@@ -56,7 +61,8 @@ class {{ resource_type | title | replace('_', '') }}Service:
                 properties=parameters.get('properties', {}),
                 location=parameters.get('location', 'eastus'),
                 tags=parameters.get('tags'),
-                api_version=api_version
+                api_version=api_version,
+                **extra_params
             )
             return resource.to_arm_dict()
     {% endif %}
