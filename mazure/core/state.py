@@ -34,6 +34,18 @@ class GenericResource(db.DynamicDocument):
             'tags': self.tags,
             'properties': self.properties
         }
+
+        # Add dynamic fields
+        excluded_fields = {
+            'id', 'resource_id', 'name', 'resource_type', 'subscription_id',
+            'resource_group', 'location', 'tags', 'properties', 'api_version',
+            'created_at', 'updated_at', '_id', '_cls'
+        }
+
+        for key in self._data:
+            if key not in excluded_fields:
+                data[key] = self._data[key]
+
         return data
 
 class StateManager:
@@ -50,7 +62,8 @@ class StateManager:
         properties: Dict[str, Any],
         location: str,
         tags: Optional[Dict[str, str]] = None,
-        api_version: Optional[str] = None
+        api_version: Optional[str] = None,
+        **kwargs
     ) -> GenericResource:
 
         resource_id = f"/subscriptions/{subscription_id}/resourceGroups/{resource_group}/providers/{resource_type}/{name}"
@@ -72,7 +85,8 @@ class StateManager:
             location=location,
             properties=properties,
             tags=tags or {},
-            api_version=api_version
+            api_version=api_version,
+            **kwargs
         )
         resource.save()
         return resource
@@ -92,7 +106,8 @@ class StateManager:
         self,
         resource_id: str,
         properties: Optional[Dict[str, Any]] = None,
-        tags: Optional[Dict[str, str]] = None
+        tags: Optional[Dict[str, str]] = None,
+        **kwargs
     ) -> GenericResource:
 
         resource = GenericResource.objects(resource_id=resource_id).first()
@@ -104,6 +119,9 @@ class StateManager:
 
         if tags is not None:
             resource.tags = tags
+
+        for key, value in kwargs.items():
+            setattr(resource, key, value)
 
         resource.updated_at = datetime.utcnow()
         resource.save()
