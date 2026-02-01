@@ -1,5 +1,4 @@
-
-from setuptools import setup
+from setuptools import setup, find_packages
 from os.path import join, dirname, abspath
 
 
@@ -12,7 +11,12 @@ def requirements():
 setup(
     name='mazure',
     version='1.0.0',
-    py_modules=['mazure'],
+    packages=find_packages(),
     include_package_data=True,
     install_requires=requirements(),
+    entry_points={
+        'console_scripts': [
+            'mazure-cli=mazure.cli.sync:app',
+        ],
+    },
 )

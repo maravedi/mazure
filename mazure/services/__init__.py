@@ -1,11 +1,8 @@
 
 from flask import Flask
-from collections import namedtuple
 
-from .utils import blueprint
+from .utils import blueprint, service, discover_generated_services
 
-
-service = namedtuple('service', ['prefix', 'property', 'blueprint'])
 
 app = Flask('mazure', instance_relative_config=True)
 app.config.from_object('mazure.config')
@@ -41,3 +38,11 @@ app.config['services'] = dict(
         )
     ]
 )
+
+# Load generated services
+generated_services = discover_generated_services(app)
+for category, services in generated_services.items():
+    if category in app.config['services']:
+        app.config['services'][category].extend(services)
+    else:
+        app.config['services'][category] = services

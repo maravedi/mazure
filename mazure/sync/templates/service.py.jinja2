@@ -1,0 +1,123 @@
+"""
+{{ provider }}/{{ resource_type }} Service Implementation
+Auto-generated from Azure REST API specifications
+Generated: {{ timestamp }}
+API Version: {{ api_version }}
+"""
+
+from typing import Optional, Dict, Any, List
+from mazure.core.state import StateManager
+# from mazure.schemas.{{ provider.lower().replace('.', '_') }} import *
+
+class {{ resource_type | title | replace('_', '') }}Service:
+    """Implements {{ provider }}/{{ resource_type }} API"""
+
+    RESOURCE_TYPE = "{{ provider }}/{{ resource_type }}"
+    API_VERSIONS = ["{{ api_version }}"]
+
+    def __init__(self, state: StateManager):
+        self.state = state
+
+    {% if operations.create %}
+    async def create_or_update(
+        self,
+        subscription_id: str,
+        resource_group: str,
+        resource_name: str,
+        parameters: Dict[str, Any],
+        api_version: str = "{{ api_version }}"
+    ) -> Dict[str, Any]:
+        """{{ operations.create.summary or 'Create or update resource' }}"""
+
+        # Validate required fields
+        # if 'location' not in parameters:
+        #    raise ValueError("location is required")
+
+        # Check if exists
+        existing = await self.state.get_resource(
+            subscription_id, resource_group, self.RESOURCE_TYPE, resource_name
+        )
+
+        if existing:
+            # Update
+            resource = await self.state.update_resource(
+                existing.resource_id,
+                properties=parameters.get('properties'),
+                tags=parameters.get('tags')
+            )
+            return resource.to_arm_dict()
+        else:
+            # Create
+            resource = await self.state.create_resource(
+                resource_type=self.RESOURCE_TYPE,
+                subscription_id=subscription_id,
+                resource_group=resource_group,
+                name=resource_name,
+                properties=parameters.get('properties', {}),
+                location=parameters.get('location', 'eastus'),
+                tags=parameters.get('tags'),
+                api_version=api_version
+            )
+            return resource.to_arm_dict()
+    {% endif %}
+
+    {% if operations.get %}
+    async def get(
+        self,
+        subscription_id: str,
+        resource_group: str,
+        resource_name: str
+    ) -> Optional[Dict[str, Any]]:
+        """{{ operations.get.summary or 'Get resource details' }}"""
+
+        resource = await self.state.get_resource(
+            subscription_id, resource_group, self.RESOURCE_TYPE, resource_name
+        )
+
+        return resource.to_arm_dict() if resource else None
+    {% endif %}
+
+    {% if operations.list %}
+    async def list(
+        self,
+        subscription_id: str,
+        resource_group: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """{{ operations.list.summary or 'List resources' }}"""
+
+        resources = await self.state.list_resources(
+            subscription_id, resource_group, self.RESOURCE_TYPE
+        )
+
+        return [r.to_arm_dict() for r in resources]
+    {% endif %}
+
+    {% if operations.delete %}
+    async def delete(
+        self,
+        subscription_id: str,
+        resource_group: str,
+        resource_name: str
+    ) -> bool:
+        """{{ operations.delete.summary or 'Delete resource' }}"""
+
+        return await self.state.delete_resource(
+            subscription_id, resource_group, self.RESOURCE_TYPE, resource_name
+        )
+    {% endif %}
+
+    {% for operation in all_operations %}
+    {% if operation.operation_id not in ['Create', 'Get', 'List', 'Update', 'Delete'] and operation != operations.create and operation != operations.get and operation != operations.list and operation != operations.delete %}
+    async def {{ operation.operation_id | lower | replace('.', '_') | replace('-', '_') }}(
+        self,
+        subscription_id: str,
+        resource_group: str,
+        resource_name: str,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """{{ operation.summary or operation.description }}"""
+
+        # TODO: Implement {{ operation.operation_id }}
+        raise NotImplementedError("{{ operation.operation_id }} not yet implemented")
+    {% endif %}
+    {% endfor %}
