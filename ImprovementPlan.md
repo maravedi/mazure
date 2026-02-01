@@ -1094,12 +1094,22 @@ def coverage():
 
 @app.command()
 def generate(
-    provider: str = typer.Argument(..., help="Provider namespace"),
-    resource_type: str = typer.Argument(..., help="Resource type"),
-    api_version: str = typer.Argument(..., help="API version")
+    provider: Optional[str] = typer.Argument(None, help="Provider namespace"),
+    resource_type: Optional[str] = typer.Argument(None, help="Resource type"),
+    api_version: Optional[str] = typer.Argument(None, help="API version"),
+    template: Optional[str] = typer.Option(None, help="Template name to generate environment from"),
+    apply: bool = typer.Option(False, help="Apply the template directly to the running server"),
+    output: Optional[Path] = typer.Option(None, help="Output path for generated script")
 ):
-    """Generate service implementation from specification"""
+    """Generate service implementation from specification OR generate environment state from template"""
     
+    if template:
+        # Scenario Generation
+        from ..scenarios.generator import ScenarioGenerator
+        # ... scenario generation implementation ...
+        return
+
+    # Code Generation
     from ..sync.codegen import MazureCodeGenerator
     
     typer.echo(f"🔄 Generating {provider}/{resource_type} (v{api_version})...")
@@ -1109,6 +1119,34 @@ def generate(
 
 if __name__ == "__main__":
     app()
+```
+
+***
+
+### 7. Scenario Generation Engine
+
+```python
+# src/mazure/scenarios/generator.py
+class ScenarioGenerator:
+    """
+    Generates and applies complex environment scenarios from templates.
+    Useful for compliance testing, demos, and reproducing issues.
+    """
+
+    def __init__(self, template_name: str, mazure_root: Path):
+        self.mazure_root = mazure_root
+        self.template_name = template_name
+        self.data = self._load_template()
+
+    def generate_script(self, output_path: Optional[Path] = None) -> Path:
+        """Generates a Python script to apply the scenario."""
+        # Generates a script that uses requests to PUT resources
+        pass
+
+    def apply(self, host: str = "http://localhost:5050"):
+        """Applies the scenario directly."""
+        # Iterates over resources and PUTs them to the running server
+        pass
 ```
 
 ***
@@ -1126,6 +1164,12 @@ mazure-cli sync coverage
 
 # Generate specific service
 mazure-cli sync generate Microsoft.Compute virtualMachines 2024-03-01
+
+# Generate and apply a compliance scenario
+mazure-cli sync generate --template compliance/cmmc --apply
+
+# Generate a setup script for a scenario
+mazure-cli sync generate --template compliance/cmmc --output setup_cmmc.py
 ```
 
 ### 2. Automated Daily Sync (GitHub Actions)
