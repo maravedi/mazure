@@ -1,2 +1,3 @@
 include requirements.txt
 recursive-include mazure/sync/templates *
+recursive-include mazure/scenarios/templates *

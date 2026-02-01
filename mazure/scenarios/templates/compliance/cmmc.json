@@ -1,0 +1,44 @@
+[
+  {
+    "provider": "Microsoft.Resources",
+    "resource_type": "resourceGroups",
+    "name": "cmmc-rg",
+    "subscription_id": "00000000-0000-0000-0000-000000000000",
+    "resource_group": "cmmc-rg",
+    "location": "eastus",
+    "api_version": "2021-04-01",
+    "properties": {}
+  },
+  {
+    "provider": "Microsoft.Compute",
+    "resource_type": "virtualMachines",
+    "name": "cmmc-vm-01",
+    "subscription_id": "00000000-0000-0000-0000-000000000000",
+    "resource_group": "cmmc-rg",
+    "location": "eastus",
+    "api_version": "2021-07-01",
+    "properties": {
+      "hardwareProfile": { "vmSize": "Standard_D2s_v3" },
+      "storageProfile": {
+        "imageReference": {
+          "publisher": "MicrosoftWindowsServer",
+          "offer": "WindowsServer",
+          "sku": "2019-Datacenter",
+          "version": "latest"
+        },
+        "osDisk": {
+          "name": "cmmc-vm-01-osdisk",
+          "createOption": "FromImage"
+        }
+      },
+      "osProfile": {
+        "computerName": "cmmc-vm-01",
+        "adminUsername": "adminUser",
+        "adminPassword": "Password1234!"
+      },
+      "networkProfile": {
+        "networkInterfaces": []
+      }
+    }
+  }
+]
