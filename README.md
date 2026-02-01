@@ -12,7 +12,61 @@ A library that allows you to mock Azure services.
 $ pip install --editable .
 ```
 
-## Usage
+## Mazure CLI
+
+Mazure now includes a CLI tool to help you synchronize with Azure REST API specifications, generate new service implementations, and check compatibility.
+
+### Prerequisites
+
+For most CLI operations, you need a local copy of the [azure-rest-api-specs](https://github.com/Azure/azure-rest-api-specs) repository.
+
+```bash
+git clone https://github.com/Azure/azure-rest-api-specs.git specs/azure-rest-api-specs --depth=1
+```
+
+### Commands
+
+#### Sync
+Synchronize with the latest Azure API specifications.
+
+```bash
+mazure-cli sync --specs-path specs/azure-rest-api-specs
+```
+
+Options:
+- `--specs-path`: Path to the `azure-rest-api-specs` repository (default: `specs/azure-rest-api-specs`).
+- `--auto-generate`: Automatically generate code for detected changes.
+
+#### Generate
+Generate a service implementation from a specification.
+
+```bash
+mazure-cli generate Microsoft.Compute virtualMachines 2024-03-01
+```
+
+Options:
+- `--spec-path`: Specific path to the spec file. If not provided, it searches in the default specs directory.
+
+#### Coverage
+Show the current API coverage report.
+
+```bash
+mazure-cli coverage
+```
+
+#### Compatibility
+Check API version compatibility against the local implementations.
+
+```bash
+mazure-cli compatibility --specs-path specs/azure-rest-api-specs
+```
+
+Options:
+- `--specs-path`: Path to the `azure-rest-api-specs` repository.
+- `--output`: Output the report to a JSON file.
+
+## Library Usage
+
 `Mazure` provides two modes of operation. It can be used as a <br/>
 - Context Manager
 - Function Decorator
@@ -147,7 +201,14 @@ With both the decorator and the context manager, Mazure allows you some fine tun
 
 ## Supported Azure Services
 
-`Mazure` is still very much a work in progress and aims to eventually implement the basic functionality of some of the most commonly used Azure services. At present, `Mazure` is able to mock the <em><strong>basic</strong></em> functionality of the below mentioned services.
+`Mazure` is still very much a work in progress and aims to eventually implement the basic functionality of some of the most commonly used Azure services.
+
+You can use the CLI to see the current coverage:
+```bash
+mazure-cli coverage
+```
+
+At present, `Mazure` implements basic functionality for services including:
 - Resource groups
 - Storage accounts
 - Virtual machines
