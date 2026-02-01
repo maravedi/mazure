@@ -67,7 +67,8 @@ def status():
 def list_specs(
     service: Optional[str] = typer.Argument(None, help="Service name (e.g., compute)"),
     provider: Optional[str] = typer.Argument(None, help="Provider namespace (e.g., Microsoft.Compute)"),
-    resource: Optional[str] = typer.Argument(None, help="Resource type (e.g., virtualMachines)")
+    resource: Optional[str] = typer.Argument(None, help="Resource type (e.g., virtualMachines)"),
+    query: Optional[str] = typer.Option(None, "--query", "-q", help="Search string for providers and resources")
 ):
     """List available services, providers, and resources from synced specs"""
     specs_root = Path("specs/azure-rest-api-specs/specification")
@@ -76,9 +77,43 @@ def list_specs(
         typer.echo("Run 'git clone https://github.com/Azure/azure-rest-api-specs.git specs/azure-rest-api-specs --depth=1' first.")
         raise typer.Exit(code=1)
 
+    if query:
+        typer.echo(f"[+] Searching for '{query}'...")
+        matches = set()
+
+        # Traverse all services
+        for s_dir in specs_root.iterdir():
+            if not s_dir.is_dir():
+                continue
+
+            # Find providers
+            for p_dir in s_dir.rglob("Microsoft.*"):
+                if not p_dir.is_dir():
+                    continue
+
+                provider_name = p_dir.name
+                if query.lower() in provider_name.lower():
+                    matches.add(f"Provider: {provider_name} (in {s_dir.name})")
+
+                # Find resources in this provider
+                for json_file in p_dir.rglob("*.json"):
+                    if json_file.name in ["common.json", "types.json"]:
+                        continue
+
+                    res_name = json_file.stem
+                    if query.lower() in res_name.lower():
+                        matches.add(f"Resource: {res_name} (in {s_dir.name}/{provider_name})")
+
+        if matches:
+            for m in sorted(list(matches), key=str.lower):
+                typer.echo(f"  - {m}")
+        else:
+            typer.echo("No matches found.")
+        return
+
     if service is None:
         typer.echo("[+] Available Services (top-level):")
-        services = sorted([d.name for d in specs_root.iterdir() if d.is_dir()])
+        services = sorted([d.name for d in specs_root.iterdir() if d.is_dir()], key=str.lower)
         for s in services:
             typer.echo(f"  - {s}")
         typer.echo("\nUsage: mazure list <service>")
@@ -112,7 +147,7 @@ def list_specs(
                     if p.is_dir():
                         providers.add(p.name)
 
-        for p in sorted(list(providers)):
+        for p in sorted(list(providers), key=str.lower):
             typer.echo(f"  - {p}")
         typer.echo(f"\nUsage: mazure list {service} <provider>")
         return
@@ -152,7 +187,7 @@ def list_specs(
 
     if resource is None:
         typer.echo(f"[+] Resources for provider '{provider}':")
-        for res in sorted(resources.keys()):
+        for res in sorted(resources.keys(), key=str.lower):
             typer.echo(f"  - {res}")
         typer.echo(f"\nUsage: mazure list {service} {provider} <resource>")
     else:
