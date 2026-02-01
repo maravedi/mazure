@@ -2,6 +2,7 @@
 from typing import Dict, List, Set, Optional, Any
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 
 @dataclass
 class APIVersionInfo:
@@ -34,6 +35,101 @@ class CompatibilityMatrix:
             self.api_versions[key] = {}
 
         self.api_versions[key][version_info.version] = version_info
+
+    def load_from_specs(self, specs_path: Path, mazure_root: Path):
+        """
+        Scan Azure specs and Mazure codebase to populate compatibility matrix
+        """
+        spec_dir = specs_path / "specification"
+        if not spec_dir.exists():
+            print(f"Warning: Specs directory {spec_dir} does not exist.")
+            return
+
+        for service_dir in spec_dir.iterdir():
+            if not service_dir.is_dir():
+                continue
+
+            # Handle resource-manager structure (specification/service/resource-manager/provider)
+            rm_dir = service_dir / "resource-manager"
+            if rm_dir.exists():
+                provider_dirs = [d for d in rm_dir.iterdir() if d.is_dir()]
+            else:
+                # Fallback for flat structure
+                provider_dirs = [service_dir]
+
+            for provider_dir in provider_dirs:
+                provider = provider_dir.name
+
+                # Map provider to Mazure service package
+                service_pkg = self._get_service_package_name(provider)
+                service_dir = mazure_root / "mazure" / "services" / service_pkg
+
+                for stability in ['stable', 'preview']:
+                    stability_dir = provider_dir / stability
+                    if not stability_dir.exists():
+                        continue
+
+                    for version_dir in stability_dir.iterdir():
+                        if not version_dir.is_dir():
+                            continue
+
+                        api_version = version_dir.name
+
+                        for spec_file in version_dir.glob('*.json'):
+                            resource_type = spec_file.stem
+
+                            # Check if supported in Mazure
+                            # We assume if the service file exists, it supports at least some version.
+                            # Ideally we should check if the specific version is supported,
+                            # but for now existence of service file implies support.
+                            # Note: Generated services store API_VERSIONS list, manual ones might not.
+                            is_supported = False
+
+                            # Check for generated service
+                            if service_dir.exists() and (service_dir / f"{resource_type.lower()}.py").exists():
+                                is_supported = True
+
+                            # Check for manual mapping (heuristic)
+                            elif self._check_manual_support(service_pkg, resource_type):
+                                is_supported = True
+
+                            self.register_api_version(
+                                provider=provider,
+                                resource_type=resource_type,
+                                version_info=APIVersionInfo(
+                                    version=api_version,
+                                    status=stability,
+                                    release_date=datetime.utcnow(), # Placeholder as we don't parse git history here
+                                    deprecation_date=None,
+                                    breaking_changes=[],
+                                    supported_in_mazure=is_supported
+                                )
+                            )
+
+    def _get_service_package_name(self, provider: str) -> str:
+        """Get the package name for the provider"""
+        provider_mapping = {
+            'Microsoft.Compute': 'compute',
+            'Microsoft.Network': 'network',
+            'Microsoft.Storage': 'storage',
+            'Microsoft.Resources': 'resources',
+            'Microsoft.Authorization': 'authorization',
+            'Microsoft.KeyVault': 'keyvault',
+            'Microsoft.Web': 'web',
+            'Microsoft.Sql': 'sql',
+        }
+        return provider_mapping.get(provider, provider.lower().replace('microsoft.', ''))
+
+    def _check_manual_support(self, service_pkg: str, resource_type: str) -> bool:
+        """Check if resource is supported by manual implementation"""
+        # This is a basic mapping based on known manual implementations
+        if service_pkg == 'compute' and resource_type.lower() in ['virtualmachines']:
+            return True
+        if service_pkg == 'resources' and resource_type.lower() in ['resourcegroups']:
+            return True
+        if service_pkg == 'storage' and resource_type.lower() in ['storageaccounts']:
+            return True
+        return False
 
     def get_supported_versions(
         self,

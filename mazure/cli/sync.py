@@ -147,5 +147,47 @@ def generate(
     asyncio.run(run())
     typer.echo("✓ Service generated successfully")
 
+@app.command()
+def compatibility(
+    specs_path: Path = typer.Option(
+        "specs/azure-rest-api-specs",
+        help="Path to azure-rest-api-specs repository"
+    ),
+    output: Optional[Path] = typer.Option(
+        None,
+        help="Output report to JSON file"
+    )
+):
+    """Check API version compatibility"""
+
+    from mazure.sync.compatibility import CompatibilityMatrix
+    import json
+    import mazure
+
+    matrix = CompatibilityMatrix()
+    typer.echo("Loading compatibility data...")
+
+    # Resolve package root dynamically to ensure services are found
+    # regardless of CWD or installation method
+    mazure_root = Path(mazure.__file__).parent.parent
+    matrix.load_from_specs(specs_path, mazure_root)
+
+    report = matrix.generate_compatibility_report()
+
+    typer.echo(f"\n📊 Compatibility Report\n")
+    typer.echo(f"Total Resource Types: {report['total_resource_types']}")
+
+    for provider, data in report['coverage_by_provider'].items():
+        if data['supported'] > 0:
+            typer.echo(f"- {provider}: {data['coverage_percentage']}% ({data['supported']}/{data['total']})")
+
+    if report['deprecated_versions']:
+        typer.echo(f"\n⚠️  Found {len(report['deprecated_versions'])} supported deprecated versions")
+
+    if output:
+        with open(output, 'w') as f:
+            json.dump(report, f, indent=2)
+        typer.echo(f"\nReport saved to {output}")
+
 if __name__ == "__main__":
     app()

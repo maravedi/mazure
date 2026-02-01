@@ -8,7 +8,7 @@ from mazure.core.state import StateManager
 from mazure.services.{{ service_package }}.{{ resource_type.lower() }} import {{ resource_type | title | replace('_', '') }}Service
 import asyncio
 
-bp = Blueprint('{{ resource_type.lower() }}', __name__)
+bp = Blueprint('{{ provider.lower().replace('.', '_') }}_{{ resource_type.lower() }}', __name__)
 state = StateManager()
 service = {{ resource_type | title | replace('_', '') }}Service(state)
 
