@@ -236,14 +236,91 @@ class MazureCodeGenerator:
             elif 'delete' in op_id or op['method'] == 'DELETE':
                 crud_operations['delete'] = op
 
+        # Extract simulation rules
+        simulation_rules = self._extract_simulation_rules(operations, code_model.get('schemas', {}))
+
         return template.render(
             provider=provider,
             resource_type=resource_type,
             api_version=api_version,
             operations=crud_operations,
             all_operations=operations,
+            simulation_rules=simulation_rules,
             timestamp=datetime.utcnow().isoformat()
         )
+
+    def _extract_simulation_rules(self, operations: list, definitions: dict) -> dict:
+        """
+        Analyze the create operation schema to identify fields that need:
+        1. Default values (if missing in request)
+        2. Mock values (if read-only)
+        """
+        rules = {'defaults': {}, 'mocks': {}}
+
+        # Find create operation
+        create_op = None
+        for op in operations:
+            op_id = op.get('operation_id', '').lower()
+            if 'create' in op_id or (op['method'] == 'PUT' and '{' in op['path']):
+                create_op = op
+                break
+
+        if not create_op:
+            return rules
+
+        # Find body parameter schema
+        schema_ref = None
+        for param in create_op.get('parameters', []):
+            if param.get('in') == 'body' and 'schema' in param:
+                schema_ref = param['schema'].get('$ref')
+                break
+
+        if not schema_ref:
+            return rules
+
+        # Resolve schema
+        # ref format: "#/definitions/SchemaName"
+        schema_name = schema_ref.split('/')[-1]
+        schema = definitions.get(schema_name)
+
+        if not schema:
+            return rules
+
+        # Helper to recursively process properties
+        def process_properties(props, prefix=""):
+            for name, details in props.items():
+                # Handle nested properties bag
+                if name == 'properties' and '$ref' in details:
+                    # Resolve nested properties
+                    nested_name = details['$ref'].split('/')[-1]
+                    nested_schema = definitions.get(nested_name)
+                    if nested_schema and 'properties' in nested_schema:
+                        process_properties(nested_schema['properties'], prefix)
+                    continue
+
+                # Check for readOnly
+                is_read_only = details.get('readOnly', False)
+
+                # Check for default
+                has_default = 'default' in details
+
+                if is_read_only:
+                    # Assign mock value
+                    # Heuristic for common Azure fields
+                    if name == 'provisioningState':
+                         rules['mocks'][name] = 'Succeeded'
+                    elif name == 'id':
+                         pass # Handled by state manager
+                    # Add more heuristics as needed
+
+                if has_default:
+                    rules['defaults'][name] = details['default']
+
+        # Start processing
+        if 'properties' in schema:
+            process_properties(schema['properties'])
+
+        return rules
 
     async def _generate_schemas(
         self,

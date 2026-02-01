@@ -42,6 +42,20 @@ class {{ resource_type | title | replace('_', '') }}Service:
         excluded_params = {'properties', 'tags', 'location', 'id', 'name', 'type'}
         extra_params = {k: v for k, v in parameters.items() if k not in excluded_params}
 
+        # Apply defaults and mocks
+        properties = parameters.get('properties', {})
+        {% if simulation_rules %}
+        {% for prop, val in simulation_rules.defaults.items() %}
+        if '{{ prop }}' not in properties:
+            properties['{{ prop }}'] = {{ val | tojson }}
+        {% endfor %}
+        {% for prop, val in simulation_rules.mocks.items() %}
+        if '{{ prop }}' not in properties:
+            properties['{{ prop }}'] = {{ val | tojson }}
+        {% endfor %}
+        {% endif %}
+        parameters['properties'] = properties
+
         if existing:
             # Update
             resource = await self.state.update_resource(
