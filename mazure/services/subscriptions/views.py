@@ -6,7 +6,7 @@ from mazure.core.state import GenericResource
 
 subscriptions = Blueprint('subscriptions', __name__)
 
-@subscriptions.route('/', methods=['GET'])
+@subscriptions.route('', methods=['GET'])
 def list_subscriptions():
     sub_ids = set()
     for model in [ResourceGroup, VirtualMachine, StorageAccount]:
