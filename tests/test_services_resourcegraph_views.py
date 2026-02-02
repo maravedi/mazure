@@ -88,6 +88,30 @@ class TestResourceGraphViews(unittest.TestCase):
                 break
         self.assertTrue(found)
 
+    def test_rg_has_resource_group_field(self):
+        query = "Resources | where type == 'microsoft.resources/resourcegroups'"
+
+        response = self.app.post(
+            '/providers/Microsoft.ResourceGraph/resources',
+            data=json.dumps({'query': query}),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        self.assertGreaterEqual(data['totalRecords'], 1)
+
+        # Check if the RG we seeded exists and has resourceGroup field
+        found = False
+        for item in data['data']:
+            # Ensure we only got what we asked for
+            self.assertEqual(item['type'].lower(), 'microsoft.resources/resourcegroups')
+
+            if item['name'] == 'rg1':
+                found = True
+                self.assertIn('resourceGroup', item)
+                self.assertEqual(item['resourceGroup'], 'rg1')
+        self.assertTrue(found)
+
     @classmethod
     def tearDownClass(cls):
         disconnect()
