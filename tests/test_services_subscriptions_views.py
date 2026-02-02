@@ -28,7 +28,7 @@ class TestSubscriptionsViews(unittest.TestCase):
         self.rg.save()
 
     def test_list_subscriptions(self):
-        response = self.app.get('/subscriptions/')
+        response = self.app.get('/subscriptions')
         self.assertEqual(response.status_code, 200)
         data = json.loads(response.data)
         self.assertGreaterEqual(len(data['value']), 1)

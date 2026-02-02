@@ -29,14 +29,17 @@ class TestResourceGroupViews(unittest.TestCase):
         register(app, services(app, ['resources']))
         app.config['TESTING'] = True
         cls.app = app.test_client()
+        disconnect()
         cls.conn = connect(
             host='mongomock://localhost',
             alias=app.config.get('RESOURCE_TYPE_RG', 'rg'),
             db=app.config.get('MAZURE_RESOURCE_MODEL', 'test'))
+        connect('mazure', host='mongomock://localhost', alias='default')
 
     def setUp(self):
         self.env = Env.load()
         self.db = get_db('rg')
+        self.default_db = get_db('default')
         self.url = '%s/subscriptions/%s/resourcegroups' \
             % (self.env.host, self.env.subscription)
         for args in groups:
@@ -92,10 +95,12 @@ class TestResourceGroupViews(unittest.TestCase):
     def tearDown(self):
         self.db.drop_collection('resourcegroups')
         self.db.client.drop_database(self.db.name)
+        self.default_db.client.drop_database(self.default_db.name)
 
     @classmethod
     def tearDownClass(cls):
         disconnect(app.config.get('RESOURCE_TYPE_RG', 'rg'))
+        disconnect('default')
 
 
 if __name__ == '__main__':
