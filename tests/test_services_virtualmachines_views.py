@@ -31,6 +31,11 @@ class TestVirtualMachineViews(unittest.TestCase):
         register(app, services(app, ['compute']))
         app.config['TESTING'] = True
         cls.app = app.test_client()
+
+        # Connect default alias
+        disconnect(alias='default')
+        connect('mazure', host='mongomock://localhost', alias='default')
+
         cls.conn = connect(
             alias=app.config.get('RESOURCE_TYPE_VM', 'vm'),
             db=app.config.get('MAZURE_RESOURCE_MODEL', 'test'),
@@ -116,12 +121,14 @@ class TestVirtualMachineViews(unittest.TestCase):
                 resourceGroup=self.env.rgroup)
 
     def tearDown(self):
+        VirtualMachine.objects.delete()
         self.db.drop_collection('virtualmachines')
         self.db.client.drop_database(self.db.name)
 
     @classmethod
     def tearDownClass(cls):
         disconnect(app.config.get('RESOURCE_TYPE_VM', 'sa'))
+        disconnect(alias='default')
 
 
 if __name__ == '__main__':

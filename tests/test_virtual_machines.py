@@ -2,6 +2,7 @@
 import uuid
 import secrets
 import unittest
+from mongoengine.connection import disconnect, connect
 
 from azure.identity import ClientSecretCredential
 from azure.mgmt.compute import ComputeManagementClient
@@ -31,6 +32,9 @@ vms = [
 class TestVirtualMachineProxy(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        disconnect(alias='default')
+        connect('mazure', host='mongomock://localhost', alias='default')
+
         cls.subscription = subscription
         cls.creds = ClientSecretCredential(
             tenant_id=str(uuid.uuid4()),
@@ -86,6 +90,9 @@ class TestVirtualMachineProxy(unittest.TestCase):
 class TestVirtualMachineProxyDecorator(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        disconnect(alias='default')
+        connect('mazure', host='mongomock://localhost', alias='default')
+
         cls.subscription = subscription
         cls.creds = ClientSecretCredential(
             tenant_id=str(uuid.uuid4()),
