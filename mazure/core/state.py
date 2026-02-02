@@ -63,10 +63,12 @@ class StateManager:
         location: str,
         tags: Optional[Dict[str, str]] = None,
         api_version: Optional[str] = None,
+        resource_id: Optional[str] = None,
         **kwargs
     ) -> GenericResource:
 
-        resource_id = f"/subscriptions/{subscription_id}/resourceGroups/{resource_group}/providers/{resource_type}/{name}"
+        if not resource_id:
+            resource_id = f"/subscriptions/{subscription_id}/resourceGroups/{resource_group}/providers/{resource_type}/{name}"
 
         # Check if exists
         existing = GenericResource.objects(resource_id=resource_id).first()
@@ -96,10 +98,12 @@ class StateManager:
         subscription_id: str,
         resource_group: str,
         resource_type: str,
-        name: str
+        name: str,
+        resource_id: Optional[str] = None
     ) -> Optional[GenericResource]:
 
-        resource_id = f"/subscriptions/{subscription_id}/resourceGroups/{resource_group}/providers/{resource_type}/{name}"
+        if not resource_id:
+            resource_id = f"/subscriptions/{subscription_id}/resourceGroups/{resource_group}/providers/{resource_type}/{name}"
         return GenericResource.objects(resource_id=resource_id).first()
 
     async def update_resource(
@@ -132,10 +136,12 @@ class StateManager:
         subscription_id: str,
         resource_group: str,
         resource_type: str,
-        name: str
+        name: str,
+        resource_id: Optional[str] = None
     ) -> bool:
 
-        resource_id = f"/subscriptions/{subscription_id}/resourceGroups/{resource_group}/providers/{resource_type}/{name}"
+        if not resource_id:
+            resource_id = f"/subscriptions/{subscription_id}/resourceGroups/{resource_group}/providers/{resource_type}/{name}"
         result = GenericResource.objects(resource_id=resource_id).delete()
         return result > 0
 

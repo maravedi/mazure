@@ -18,7 +18,7 @@ class ResourcesService:
     def __init__(self, state: StateManager):
         self.state = state
 
-    
+
     async def create_or_update(
         self,
         subscription_id: str,
@@ -59,9 +59,9 @@ class ResourcesService:
                 api_version=api_version
             )
             return resource.to_arm_dict()
-    
 
-    
+
+
     async def get(
         self,
         subscription_id: str,
@@ -75,9 +75,9 @@ class ResourcesService:
         )
 
         return resource.to_arm_dict() if resource else None
-    
 
-    
+
+
     async def list(
         self,
         subscription_id: str,
@@ -90,9 +90,9 @@ class ResourcesService:
         )
 
         return [r.to_arm_dict() for r in resources]
-    
 
-    
+
+
     async def delete(
         self,
         subscription_id: str,
@@ -104,10 +104,10 @@ class ResourcesService:
         return await self.state.delete_resource(
             subscription_id, resource_group, self.RESOURCE_TYPE, resource_name
         )
-    
 
-    
-    
+
+
+
     async def operations_list(
         self,
         subscription_id: str,
@@ -119,9 +119,9 @@ class ResourcesService:
 
         # TODO: Implement Operations_List
         raise NotImplementedError("Operations_List not yet implemented")
-    
-    
-    
+
+
+
     async def providers_unregister(
         self,
         subscription_id: str,
@@ -133,9 +133,9 @@ class ResourcesService:
 
         # TODO: Implement Providers_Unregister
         raise NotImplementedError("Providers_Unregister not yet implemented")
-    
-    
-    
+
+
+
     async def providers_registeratmanagementgroupscope(
         self,
         subscription_id: str,
@@ -147,9 +147,9 @@ class ResourcesService:
 
         # TODO: Implement Providers_RegisterAtManagementGroupScope
         raise NotImplementedError("Providers_RegisterAtManagementGroupScope not yet implemented")
-    
-    
-    
+
+
+
     async def providers_providerpermissions(
         self,
         subscription_id: str,
@@ -161,9 +161,9 @@ class ResourcesService:
 
         # TODO: Implement Providers_ProviderPermissions
         raise NotImplementedError("Providers_ProviderPermissions not yet implemented")
-    
-    
-    
+
+
+
     async def providers_register(
         self,
         subscription_id: str,
@@ -175,9 +175,9 @@ class ResourcesService:
 
         # TODO: Implement Providers_Register
         raise NotImplementedError("Providers_Register not yet implemented")
-    
-    
-    
+
+
+
     async def providers_list(
         self,
         subscription_id: str,
@@ -189,9 +189,9 @@ class ResourcesService:
 
         # TODO: Implement Providers_List
         raise NotImplementedError("Providers_List not yet implemented")
-    
-    
-    
+
+
+
     async def providers_listattenantscope(
         self,
         subscription_id: str,
@@ -203,9 +203,9 @@ class ResourcesService:
 
         # TODO: Implement Providers_ListAtTenantScope
         raise NotImplementedError("Providers_ListAtTenantScope not yet implemented")
-    
-    
-    
+
+
+
     async def providers_get(
         self,
         subscription_id: str,
@@ -217,9 +217,9 @@ class ResourcesService:
 
         # TODO: Implement Providers_Get
         raise NotImplementedError("Providers_Get not yet implemented")
-    
-    
-    
+
+
+
     async def providerresourcetypes_list(
         self,
         subscription_id: str,
@@ -231,9 +231,9 @@ class ResourcesService:
 
         # TODO: Implement ProviderResourceTypes_List
         raise NotImplementedError("ProviderResourceTypes_List not yet implemented")
-    
-    
-    
+
+
+
     async def providers_getattenantscope(
         self,
         subscription_id: str,
@@ -245,9 +245,9 @@ class ResourcesService:
 
         # TODO: Implement Providers_GetAtTenantScope
         raise NotImplementedError("Providers_GetAtTenantScope not yet implemented")
-    
-    
-    
+
+
+
     async def resources_listbyresourcegroup(
         self,
         subscription_id: str,
@@ -259,9 +259,9 @@ class ResourcesService:
 
         # TODO: Implement Resources_ListByResourceGroup
         raise NotImplementedError("Resources_ListByResourceGroup not yet implemented")
-    
-    
-    
+
+
+
     async def resourcegroups_createorupdate(
         self,
         subscription_id: str,
@@ -273,9 +273,9 @@ class ResourcesService:
 
         # TODO: Implement ResourceGroups_CreateOrUpdate
         raise NotImplementedError("ResourceGroups_CreateOrUpdate not yet implemented")
-    
-    
-    
+
+
+
     async def resourcegroups_delete(
         self,
         subscription_id: str,
@@ -287,9 +287,9 @@ class ResourcesService:
 
         # TODO: Implement ResourceGroups_Delete
         raise NotImplementedError("ResourceGroups_Delete not yet implemented")
-    
-    
-    
+
+
+
     async def resourcegroups_get(
         self,
         subscription_id: str,
@@ -301,9 +301,9 @@ class ResourcesService:
 
         # TODO: Implement ResourceGroups_Get
         raise NotImplementedError("ResourceGroups_Get not yet implemented")
-    
-    
-    
+
+
+
     async def resourcegroups_update(
         self,
         subscription_id: str,
@@ -315,9 +315,9 @@ class ResourcesService:
 
         # TODO: Implement ResourceGroups_Update
         raise NotImplementedError("ResourceGroups_Update not yet implemented")
-    
-    
-    
+
+
+
     async def resourcegroups_exporttemplate(
         self,
         subscription_id: str,
@@ -329,9 +329,9 @@ class ResourcesService:
 
         # TODO: Implement ResourceGroups_ExportTemplate
         raise NotImplementedError("ResourceGroups_ExportTemplate not yet implemented")
-    
-    
-    
+
+
+
     async def resourcegroups_list(
         self,
         subscription_id: str,
@@ -343,9 +343,9 @@ class ResourcesService:
 
         # TODO: Implement ResourceGroups_List
         raise NotImplementedError("ResourceGroups_List not yet implemented")
-    
-    
-    
+
+
+
     async def resources_moveresources(
         self,
         subscription_id: str,
@@ -357,9 +357,9 @@ class ResourcesService:
 
         # TODO: Implement Resources_MoveResources
         raise NotImplementedError("Resources_MoveResources not yet implemented")
-    
-    
-    
+
+
+
     async def resources_validatemoveresources(
         self,
         subscription_id: str,
@@ -371,9 +371,9 @@ class ResourcesService:
 
         # TODO: Implement Resources_ValidateMoveResources
         raise NotImplementedError("Resources_ValidateMoveResources not yet implemented")
-    
-    
-    
+
+
+
     async def resources_list(
         self,
         subscription_id: str,
@@ -385,37 +385,131 @@ class ResourcesService:
 
         # TODO: Implement Resources_List
         raise NotImplementedError("Resources_List not yet implemented")
-    
-    
-    
+
+
+    async def _handle_generic_resource(
+        self,
+        subscription_id: str,
+        resource_group: str,
+        resource_provider_namespace: str,
+        resource_type: str,
+        resource_name: str,
+        parameters: Optional[Dict[str, Any]] = None,
+        parent_resource_path: Optional[str] = None,
+        api_version: str = "2025-04-01",
+        method: str = "GET"
+    ) -> Any:
+
+        full_resource_type_parts = [resource_provider_namespace]
+        if parent_resource_path:
+            parent_parts = parent_resource_path.split('/')
+            # Assuming parent path is type/name/type/name...
+            # We want to extract types.
+            # parent_parts[0] is type, parent_parts[1] is name, etc.
+            parent_types = parent_parts[0::2]
+            full_resource_type_parts.extend(parent_types)
+
+        full_resource_type_parts.append(resource_type)
+        full_resource_type = '/'.join(full_resource_type_parts)
+
+        if parent_resource_path:
+             resource_id = f"/subscriptions/{subscription_id}/resourceGroups/{resource_group}/providers/{resource_provider_namespace}/{parent_resource_path}/{resource_type}/{resource_name}"
+        else:
+             resource_id = f"/subscriptions/{subscription_id}/resourceGroups/{resource_group}/providers/{resource_provider_namespace}/{resource_type}/{resource_name}"
+
+        if method == "PUT":
+            parameters = parameters or {}
+            existing = await self.state.get_resource(
+                subscription_id, resource_group, full_resource_type, resource_name, resource_id=resource_id
+            )
+            if existing:
+                resource = await self.state.update_resource(
+                    resource_id,
+                    properties=parameters.get('properties'),
+                    tags=parameters.get('tags')
+                )
+                return resource.to_arm_dict()
+            else:
+                resource = await self.state.create_resource(
+                    resource_type=full_resource_type,
+                    subscription_id=subscription_id,
+                    resource_group=resource_group,
+                    name=resource_name,
+                    properties=parameters.get('properties', {}),
+                    location=parameters.get('location', 'eastus'),
+                    tags=parameters.get('tags'),
+                    api_version=api_version,
+                    resource_id=resource_id
+                )
+                return resource.to_arm_dict()
+
+        elif method == "GET":
+             resource = await self.state.get_resource(
+                subscription_id, resource_group, full_resource_type, resource_name, resource_id=resource_id
+             )
+             return resource.to_arm_dict() if resource else None
+
+        elif method == "DELETE":
+             return await self.state.delete_resource(
+                subscription_id, resource_group, full_resource_type, resource_name, resource_id=resource_id
+             )
+
     async def resources_delete(
         self,
         subscription_id: str,
         resource_group: str,
         resource_name: str,
+        resource_provider_namespace: Optional[str] = None,
+        resource_type: Optional[str] = None,
+        parent_resource_path: Optional[str] = None,
         **kwargs
     ) -> Dict[str, Any]:
         """Deletes a resource."""
 
-        # TODO: Implement Resources_Delete
-        raise NotImplementedError("Resources_Delete not yet implemented")
-    
-    
-    
+        if not resource_provider_namespace or not resource_type:
+            raise ValueError("Provider namespace and resource type required")
+
+        return await self._handle_generic_resource(
+            subscription_id=subscription_id,
+            resource_group=resource_group,
+            resource_provider_namespace=resource_provider_namespace,
+            resource_type=resource_type,
+            resource_name=resource_name,
+            parent_resource_path=parent_resource_path,
+            method="DELETE"
+        )
+
+
+
     async def resources_createorupdate(
         self,
         subscription_id: str,
         resource_group: str,
         resource_name: str,
+        resource_provider_namespace: Optional[str] = None,
+        resource_type: Optional[str] = None,
+        parent_resource_path: Optional[str] = None,
+        parameters: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> Dict[str, Any]:
         """Creates a resource."""
 
-        # TODO: Implement Resources_CreateOrUpdate
-        raise NotImplementedError("Resources_CreateOrUpdate not yet implemented")
-    
-    
-    
+        if not resource_provider_namespace or not resource_type:
+            raise ValueError("Provider namespace and resource type required")
+
+        return await self._handle_generic_resource(
+            subscription_id=subscription_id,
+            resource_group=resource_group,
+            resource_provider_namespace=resource_provider_namespace,
+            resource_type=resource_type,
+            resource_name=resource_name,
+            parent_resource_path=parent_resource_path,
+            parameters=parameters,
+            method="PUT"
+        )
+
+
+
     async def resources_update(
         self,
         subscription_id: str,
@@ -427,23 +521,36 @@ class ResourcesService:
 
         # TODO: Implement Resources_Update
         raise NotImplementedError("Resources_Update not yet implemented")
-    
-    
-    
+
+
+
     async def resources_get(
         self,
         subscription_id: str,
         resource_group: str,
         resource_name: str,
+        resource_provider_namespace: Optional[str] = None,
+        resource_type: Optional[str] = None,
+        parent_resource_path: Optional[str] = None,
         **kwargs
     ) -> Dict[str, Any]:
         """Gets a resource."""
 
-        # TODO: Implement Resources_Get
-        raise NotImplementedError("Resources_Get not yet implemented")
-    
-    
-    
+        if not resource_provider_namespace or not resource_type:
+            raise ValueError("Provider namespace and resource type required")
+
+        return await self._handle_generic_resource(
+            subscription_id=subscription_id,
+            resource_group=resource_group,
+            resource_provider_namespace=resource_provider_namespace,
+            resource_type=resource_type,
+            resource_name=resource_name,
+            parent_resource_path=parent_resource_path,
+            method="GET"
+        )
+
+
+
     async def resources_deletebyid(
         self,
         subscription_id: str,
@@ -455,9 +562,9 @@ class ResourcesService:
 
         # TODO: Implement Resources_DeleteById
         raise NotImplementedError("Resources_DeleteById not yet implemented")
-    
-    
-    
+
+
+
     async def resources_createorupdatebyid(
         self,
         subscription_id: str,
@@ -469,9 +576,9 @@ class ResourcesService:
 
         # TODO: Implement Resources_CreateOrUpdateById
         raise NotImplementedError("Resources_CreateOrUpdateById not yet implemented")
-    
-    
-    
+
+
+
     async def resources_updatebyid(
         self,
         subscription_id: str,
@@ -483,9 +590,9 @@ class ResourcesService:
 
         # TODO: Implement Resources_UpdateById
         raise NotImplementedError("Resources_UpdateById not yet implemented")
-    
-    
-    
+
+
+
     async def resources_getbyid(
         self,
         subscription_id: str,
@@ -497,9 +604,9 @@ class ResourcesService:
 
         # TODO: Implement Resources_GetById
         raise NotImplementedError("Resources_GetById not yet implemented")
-    
-    
-    
+
+
+
     async def tags_deletevalue(
         self,
         subscription_id: str,
@@ -511,9 +618,9 @@ class ResourcesService:
 
         # TODO: Implement Tags_DeleteValue
         raise NotImplementedError("Tags_DeleteValue not yet implemented")
-    
-    
-    
+
+
+
     async def tags_createorupdatevalue(
         self,
         subscription_id: str,
@@ -525,9 +632,9 @@ class ResourcesService:
 
         # TODO: Implement Tags_CreateOrUpdateValue
         raise NotImplementedError("Tags_CreateOrUpdateValue not yet implemented")
-    
-    
-    
+
+
+
     async def tags_createorupdate(
         self,
         subscription_id: str,
@@ -539,9 +646,9 @@ class ResourcesService:
 
         # TODO: Implement Tags_CreateOrUpdate
         raise NotImplementedError("Tags_CreateOrUpdate not yet implemented")
-    
-    
-    
+
+
+
     async def tags_delete(
         self,
         subscription_id: str,
@@ -553,9 +660,9 @@ class ResourcesService:
 
         # TODO: Implement Tags_Delete
         raise NotImplementedError("Tags_Delete not yet implemented")
-    
-    
-    
+
+
+
     async def tags_list(
         self,
         subscription_id: str,
@@ -567,11 +674,11 @@ class ResourcesService:
 
         # TODO: Implement Tags_List
         raise NotImplementedError("Tags_List not yet implemented")
-    
-    
-    
-    
-    
+
+
+
+
+
     async def tags_updateatscope(
         self,
         subscription_id: str,
@@ -583,9 +690,3 @@ class ResourcesService:
 
         # TODO: Implement Tags_UpdateAtScope
         raise NotImplementedError("Tags_UpdateAtScope not yet implemented")
-    
-    
-    
-    
-    
-    
