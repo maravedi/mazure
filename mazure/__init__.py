@@ -6,6 +6,7 @@ import inspect
 import functools
 
 from .proxy import Mazure
+from .api_client import MazureAPI
 
 
 def mazure(*fargs, **fkwargs):
@@ -18,3 +19,6 @@ def mazure(*fargs, **fkwargs):
 
     targets = [arg for arg in fargs if not inspect.isfunction(arg)]
     return interface
+
+
+__all__ = ['mazure', 'Mazure', 'MazureAPI']

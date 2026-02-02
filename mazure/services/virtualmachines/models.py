@@ -2,9 +2,6 @@
 import uuid
 import mongoengine as db
 
-from flask import current_app as app
-from flask_mongoengine import MongoEngine
-
 
 class Properties:
     name = "example"
@@ -18,7 +15,6 @@ class Properties:
 
 
 props = Properties()
-store = MongoEngine(app._get_current_object())
 
 
 class VirtualMachine(db.Document):

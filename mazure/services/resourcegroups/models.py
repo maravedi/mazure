@@ -1,12 +1,6 @@
 
 import mongoengine as db
 
-from flask import current_app as app
-from flask_mongoengine import MongoEngine
-
-
-store = MongoEngine(app._get_current_object())
-
 
 class ResourceGroup(db.Document):
     tags = db.DictField()

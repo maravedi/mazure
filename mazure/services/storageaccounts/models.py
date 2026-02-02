@@ -3,8 +3,6 @@ import uuid
 import mongoengine as db
 
 from datetime import datetime
-from flask import current_app as app
-from flask_mongoengine import MongoEngine
 
 
 class Properties:
@@ -15,7 +13,6 @@ class Properties:
 
 
 props = Properties()
-store = MongoEngine(app._get_current_object())
 
 
 class StorageAccount(db.Document):
