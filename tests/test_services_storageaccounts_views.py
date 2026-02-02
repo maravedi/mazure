@@ -15,6 +15,11 @@ class TestStorageAccountViews(unittest.TestCase):
         register(app, services(app, ['storage']))
         app.config['TESTING'] = True
         cls.app = app.test_client()
+
+        # Connect default alias for models that might rely on it or lack explicit alias
+        disconnect(alias='default')
+        connect('mazure', host='mongomock://localhost', alias='default')
+
         cls.conn = connect(
             alias=app.config.get('RESOURCE_TYPE_SA', 'sa'),
             db=app.config.get('MAZURE_RESOURCE_MODEL', 'test'),
@@ -65,12 +70,14 @@ class TestStorageAccountViews(unittest.TestCase):
         pass
 
     def tearDown(self):
+        StorageAccount.objects.delete()
         self.db.drop_collection('storageaccounts')
         self.db.client.drop_database(self.db.name)
 
     @classmethod
     def tearDownClass(cls):
         disconnect(app.config.get('RESOURCE_TYPE_SA', 'sa'))
+        disconnect(alias='default')
 
 
 if __name__ == '__main__':
