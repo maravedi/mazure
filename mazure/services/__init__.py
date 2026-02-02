@@ -36,6 +36,20 @@ app.config['services'] = dict(
             'storage_accounts',
             blueprint(app, 'storageaccounts')
         )
+    ],
+    resourcegraph=[
+        service(
+            None,
+            'resource_graph',
+            blueprint(app, 'resourcegraph')
+        )
+    ],
+    subscriptions=[
+        service(
+            '/subscriptions',
+            'subscriptions',
+            blueprint(app, 'subscriptions')
+        )
     ]
 )
 

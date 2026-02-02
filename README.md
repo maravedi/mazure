@@ -270,6 +270,8 @@ At present, `Mazure` implements basic functionality for services including:
 - Resource groups
 - Storage accounts
 - Virtual machines
+- Resource Graph
+- Subscriptions
 
 
 ## Resources
