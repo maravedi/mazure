@@ -59,6 +59,10 @@ def query_resources():
     if match:
         types_str = match.group(1)
         types = [t.strip().strip("'").strip('"') for t in types_str.split(',')]
+    else:
+        match = re.search(r"type\s*==\s*['\"]([^'\"]+)['\"]", q_lower)
+        if match:
+            types = [match.group(1)]
 
     def to_arg_resource(item, default_type):
         rid = None
@@ -83,6 +87,8 @@ def query_resources():
 
         if hasattr(item, 'resourceGroup'): res['resourceGroup'] = item.resourceGroup
         elif hasattr(item, 'resource_group'): res['resourceGroup'] = item.resource_group
+        elif r_type and r_type.lower() == 'microsoft.resources/resourcegroups':
+            res['resourceGroup'] = getattr(item, 'name', None)
 
         return res
 
