@@ -11,6 +11,18 @@ import re
 
 app = typer.Typer()
 
+# Import discovery integration subcommands
+try:
+    from .seed import app as seed_app
+    from .snapshot import app as snapshot_app
+    
+    # Add as subcommands
+    app.add_typer(seed_app, name="seed")
+    app.add_typer(snapshot_app, name="snapshot")
+    DISCOVERY_COMMANDS_AVAILABLE = True
+except ImportError:
+    DISCOVERY_COMMANDS_AVAILABLE = False
+
 import socket
 
 @app.command()
@@ -62,6 +74,14 @@ def status():
             typer.echo("\nTo start the server, run: mazure serve")
         
         typer.echo("\nSee README.md for more details on making REST calls.")
+    
+    # Show discovery integration status
+    if DISCOVERY_COMMANDS_AVAILABLE:
+        typer.echo("\n[i] Discovery Integration: Available")
+        typer.echo("    Use 'mazure seed' and 'mazure snapshot' commands to work with Azure Discovery")
+    else:
+        typer.echo("\n[i] Discovery Integration: Not Available")
+        typer.echo("    Install with: pip install azure-discovery azure-identity")
 
 @app.command(name="list")
 def list_specs(
