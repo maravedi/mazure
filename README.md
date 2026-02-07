@@ -10,13 +10,16 @@ Mazure is a mocking framework for Azure services, similar to [Moto](https://gith
 - **Code Generation**: AutoRest-based service implementation generator
 - **API Coverage**: Growing support for Compute, Storage, Network, and more
 
-### Discovery Integration (NEW! 🎉)
+### Discovery Integration (✅ COMPLETE)
 - **Seed from Live Azure**: Import real Azure topology into mock state
 - **Snapshot Fixtures**: Create deterministic test environments from production
 - **Relationship Tracking**: Model resource dependencies for cascading operations
+- **Query Engines**: KQL (Resource Graph) and OData (Microsoft Graph) support
+- **Schema Generation**: Auto-generate Pydantic models from discovered resources
+- **Mock Validation**: Compare mock implementations against live Azure
 - **Multi-Cloud Support**: Works with Azure Government, China, and other clouds
 
-See [Discovery Integration Documentation](docs/DiscoveryIntegration.md) for details.
+**✨ NEW:** See [Discovery Integration README](README_DISCOVERY_INTEGRATION.md) for complete features and quick start guide.
 
 ## Quick Start
 
@@ -53,7 +56,7 @@ def test_create_vm():
     assert vm.name == 'vm-name'
 ```
 
-### Discovery Integration
+### Discovery Integration Quick Start
 
 Seed mazure with real Azure topology:
 
@@ -69,6 +72,21 @@ mazure seed from-azure <tenant-id> --output fixtures/prod.json
 
 # Load snapshot in tests
 mazure snapshot load fixtures/prod.json
+```
+
+### Query with Resource Graph or Microsoft Graph
+
+```bash
+# Start the server
+python -m uvicorn mazure.app:app --reload --port 8000
+
+# Query Resource Graph (KQL)
+curl -X POST http://localhost:8000/providers/Microsoft.ResourceGraph/resources \
+  -H "Content-Type: application/json" \
+  -d '{"subscriptions":["sub-id"],"query":"Resources | where type =~ '"'"'Microsoft.Compute/virtualMachines'"'"' | take 10"}'
+
+# Query Microsoft Graph (OData)
+curl "http://localhost:8000/v1.0/users?\$top=5&\$filter=startswith(displayName,'John')"
 ```
 
 Use in tests:
@@ -119,11 +137,15 @@ mazure seed from-azure <tenant-id> [options]
   -s, --subscription TEXT     Subscription ID(s) to discover
   --include-entra             Include Entra ID objects
   -o, --output PATH           Export snapshot to file
-  -e, --environment TEXT      Azure environment (AZURE_PUBLIC, AZURE_GOVERNMENT, etc.)
+  -e, --environment TEXT      Azure environment
 
 # Manage snapshots
 mazure snapshot list [--dir PATH]    # List available snapshots
 mazure snapshot load PATH [--clear]  # Load snapshot into state
+
+# Validation commands (NEW!)
+mazure validate service SNAPSHOT_FILE [-t TYPE] [-o OUTPUT]  # Validate mock against discovery
+mazure validate schema SNAPSHOT_FILE TYPE [-e FILE]          # Generate/validate schema
 
 # Server and status
 mazure status    # Show generated services and server status
@@ -144,14 +166,46 @@ AutoRest-based generator creates service implementations from Azure OpenAPI spec
 2. Generate Python service code
 3. Auto-register API routes
 
-### Discovery Integration
-Phase 1 implementation (complete):
+### Discovery Integration (All Phases Complete)
+
+#### ✅ Phase 1: Foundation
 - Import Azure resources via AzureDiscovery
 - Store relationships for dependency tracking
 - Export/import snapshots as test fixtures
 - CLI commands for seeding and snapshot management
 
-See [Integration Plan](AzureDiscoveryIntegrationPlan.md) for roadmap.
+#### ✅ Phase 2: Query Engines
+- **Resource Graph Service**: Full KQL query support (WHERE, PROJECT, SUMMARIZE, etc.)
+- **Microsoft Graph API**: Users, groups, OData parameters
+- FastAPI routes with pagination
+- MongoDB-backed state queries
+
+#### ✅ Phase 3: Intelligence Layer
+- **ResponseSynthesizer**: Generate realistic resources from patterns
+- **SchemaGenerator**: Auto-generate Pydantic models from discovery data
+- **DiscoveryBasedValidator**: Compare mocks against live Azure
+- CLI validation commands
+
+#### ✅ Phase 4: Production Hardening
+- Error scenario simulation (429, 404, 500, etc.)
+- Performance benchmarks and optimization
+- MongoDB indexes for fast queries
+- Integration test suite
+- Comprehensive documentation
+
+See [Complete Checklist](COMPLETE_CHECKLIST.md) for detailed implementation status.
+
+## Documentation
+
+### Getting Started
+- **[Discovery Integration README](README_DISCOVERY_INTEGRATION.md)** - Quick start and complete guide
+- **[Complete Checklist](COMPLETE_CHECKLIST.md)** - All features and how to use them
+- **[Phase 2 Features](PHASE2_FEATURES.md)** - Query engine documentation
+
+### Architecture & Planning
+- **[Integration Plan](AzureDiscoveryIntegrationPlan.md)** - Full implementation roadmap
+- **[Implementation Status](IMPLEMENTATION_STATUS.md)** - Phase tracking
+- **[Improvement Plan](ImprovementPlan.md)** - Overall mazure roadmap
 
 ## Development
 
@@ -170,25 +224,27 @@ pip install -e .
 
 # Start MongoDB
 mongod --dbpath /path/to/data
+
+# Setup database indexes
+python scripts/setup_mongodb_indexes.py
 ```
 
 ### Running Tests
 ```bash
-# Unit tests
-pytest tests/unit
+# All tests with one command
+sh scripts/run_all_tests.sh
 
-# Integration tests (requires MongoDB)
-pytest tests/integration
+# Or individually:
+pytest tests/unit                      # Unit tests
+pytest tests/integration               # Integration tests (requires MongoDB)
+pytest --cov=mazure tests/             # With coverage
 
-# With coverage
-pytest --cov=mazure tests/
+# Run benchmarks
+python scripts/benchmark_queries.py
+
+# Run examples
+python examples/query_examples.py
 ```
-
-## Documentation
-
-- [Discovery Integration](docs/DiscoveryIntegration.md) - Azure Discovery integration guide
-- [Integration Plan](AzureDiscoveryIntegrationPlan.md) - Full implementation roadmap
-- [Improvement Plan](ImprovementPlan.md) - Overall mazure roadmap
 
 ## Contributing
 
@@ -210,23 +266,32 @@ Apache 2.0 - See [LICENSE](LICENSE) for details.
 
 ## Status
 
-**Phase 1 (Discovery Integration)**: Complete ✅
+**Phase 1 (Discovery Integration - Foundation)**: ✅ Complete
 - State seeding from Azure
 - Snapshot management
 - CLI commands
-- Documentation
+- Relationship tracking
 
-**Phase 2 (Query Engines)**: Planned 📅
-- Resource Graph queries
+**Phase 2 (Query Engines)**: ✅ Complete
+- Resource Graph KQL queries
 - Microsoft Graph API mocks
-- Relationship queries
+- FastAPI routes
+- Pagination support
 
-**Phase 3 (Intelligence)**: Planned 📅
+**Phase 3 (Intelligence Layer)**: ✅ Complete
 - Response synthesis
-- Schema validation
-- Test fixture library
+- Schema generation
+- Discovery-based validation
+- CLI validation commands
 
-**Phase 4 (Production)**: Planned 📅
-- Error scenarios
+**Phase 4 (Production Hardening)**: ✅ Complete
+- Error scenario simulation
 - Performance optimization
-- Comprehensive docs
+- Integration tests
+- Comprehensive documentation
+
+---
+
+**All discovery integration phases are complete!** ✅
+
+See [README_DISCOVERY_INTEGRATION.md](README_DISCOVERY_INTEGRATION.md) for the complete guide.

@@ -15,13 +15,16 @@ app = typer.Typer()
 try:
     from .seed import app as seed_app
     from .snapshot import app as snapshot_app
+    from .validate import validate as validate_app
     
     # Add as subcommands
     app.add_typer(seed_app, name="seed")
     app.add_typer(snapshot_app, name="snapshot")
+    app.add_typer(validate_app, name="validate")
     DISCOVERY_COMMANDS_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     DISCOVERY_COMMANDS_AVAILABLE = False
+    IMPORT_ERROR = str(e)
 
 import socket
 
@@ -77,10 +80,11 @@ def status():
     
     # Show discovery integration status
     if DISCOVERY_COMMANDS_AVAILABLE:
-        typer.echo("\n[i] Discovery Integration: Available")
-        typer.echo("    Use 'mazure seed' and 'mazure snapshot' commands to work with Azure Discovery")
+        typer.echo("\n[i] Discovery Integration: ✅ Available (All phases complete!)")
+        typer.echo("    Commands: mazure seed | mazure snapshot | mazure validate")
+        typer.echo("    Documentation: README_DISCOVERY_INTEGRATION.md")
     else:
-        typer.echo("\n[i] Discovery Integration: Not Available")
+        typer.echo("\n[i] Discovery Integration: ❌ Not Available")
         typer.echo("    Install with: pip install azure-discovery azure-identity")
 
 @app.command(name="list")
@@ -367,7 +371,7 @@ def generate(
 
     async def run():
         generator = MazureCodeGenerator(
-            specs_path=spec_path, # Not really used in init but passed to generate methods
+            specs_path=spec_path,
             mazure_root=Path.cwd()
         )
 
@@ -426,8 +430,6 @@ def compatibility(
     matrix = CompatibilityMatrix()
     typer.echo("Loading compatibility data...")
 
-    # Resolve package root dynamically to ensure services are found
-    # regardless of CWD or installation method
     mazure_root = Path(mazure.__file__).parent.parent
     matrix.load_from_specs(specs_path, mazure_root)
 
@@ -457,7 +459,7 @@ def serve(
     from mazure.services import app as flask_app
     from mazure.services.utils import services, register
     
-    # Register all available services (passing empty list to services() gets all supported)
+    # Register all available services
     all_services = services(flask_app, [])
     register(flask_app, all_services)
     
