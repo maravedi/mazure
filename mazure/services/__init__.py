@@ -50,12 +50,25 @@ app.config['services'] = dict(
             'subscriptions',
             blueprint(app, 'subscriptions')
         )
+    ],
+    generic=[
+        service(
+            '/subscriptions',
+            'generic',
+            blueprint(app, 'generic')
+        )
     ]
 )
 
 # Load generated services
 generated_services = discover_generated_services(app)
 for category, services in generated_services.items():
+    # Exclude microsoft_resources_resources as it conflicts with generic service
+    # and provides incomplete/broken implementations.
+    services = [s for s in services if s.blueprint.name != 'microsoft_resources_resources']
+    if not services:
+        continue
+
     if category in app.config['services']:
         app.config['services'][category].extend(services)
     else:
