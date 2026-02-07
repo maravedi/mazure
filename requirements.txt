@@ -15,3 +15,7 @@ urllib3<2.0.0
 MarkupSafe==2.0.1
 requests==2.32.5
 setuptools<81
+
+# Azure Discovery Integration (Phase 1)
+azure-discovery>=1.0.0
+azure-identity>=1.15.0
