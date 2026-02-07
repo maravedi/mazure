@@ -1,349 +1,269 @@
-"""Schema generator for creating Pydantic models from discovery data.
+"""Dynamic Pydantic schema generation from discovery samples."""
 
-Analyzes discovered resources to automatically generate type-safe schemas.
-"""
-
-from typing import Type, List, Dict, Any, get_type_hints, Optional
+from typing import Dict, Any, List, Set, Optional, Type
 from collections import defaultdict, Counter
+import re
 import logging
-from pathlib import Path
-
-try:
-    from pydantic import BaseModel, create_model, Field
-    PYDANTIC_AVAILABLE = True
-except ImportError:
-    PYDANTIC_AVAILABLE = False
-    logger.warning("Pydantic not available. Schema generation will be limited.")
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
 
 class SchemaGenerator:
-    """Generate Pydantic schemas from discovery models.
+    """Generate Pydantic models from discovered Azure resources.
     
-    Analyzes discovered resource samples to infer schema structure,
-    field types, and nullability.
+    Analyzes historical discovery data to infer property types,
+    nullability, and generate accurate Pydantic schemas.
     """
     
-    def __init__(self):
-        """Initialize schema generator."""
-        if not PYDANTIC_AVAILABLE:
-            raise ImportError("Pydantic is required for schema generation")
+    def __init__(self, samples: List[Dict[str, Any]]):
+        """Initialize with resource samples.
+        
+        Args:
+            samples: List of resource dictionaries from discovery
+        """
+        self.samples = samples
+        self.schemas = {}
+        self.type_stats = defaultdict(lambda: defaultdict(lambda: {
+            'types': Counter(),
+            'null_count': 0,
+            'sample_values': []
+        }))
     
-    def generate_resource_schema(
-        self,
-        resource_type: str,
-        sample_nodes: List[Any],
-        min_coverage: float = 0.5
-    ) -> Type[BaseModel]:
-        """Infer Pydantic schema from discovered resource samples.
+    def analyze_resources(self, resource_type: str) -> Dict[str, Any]:
+        """Analyze samples for a specific resource type.
+        
+        Args:
+            resource_type: Azure resource type to analyze
+        
+        Returns:
+            Schema dictionary with field information
+        """
+        type_samples = [
+            s for s in self.samples 
+            if s.get('type', '').lower() == resource_type.lower()
+        ]
+        
+        if not type_samples:
+            logger.warning(f"No samples found for {resource_type}")
+            return {}
+        
+        logger.info(f"Analyzing {len(type_samples)} samples of {resource_type}")
+        
+        schema = {
+            'resource_type': resource_type,
+            'sample_count': len(type_samples),
+            'properties': {},
+            'required_fields': set(),
+            'optional_fields': set()
+        }
+        
+        # Analyze properties
+        property_data = defaultdict(lambda: {
+            'types': Counter(),
+            'null_count': 0,
+            'non_null_count': 0,
+            'sample_values': []
+        })
+        
+        for sample in type_samples:
+            properties = sample.get('properties', {})
+            if not isinstance(properties, dict):
+                continue
+            
+            # Track which properties appear
+            seen_props = set(properties.keys())
+            
+            for key, value in properties.items():
+                if value is None:
+                    property_data[key]['null_count'] += 1
+                else:
+                    property_data[key]['non_null_count'] += 1
+                    property_data[key]['types'][type(value).__name__] += 1
+                    
+                    # Store sample values (up to 5)
+                    if len(property_data[key]['sample_values']) < 5:
+                        property_data[key]['sample_values'].append(value)
+        
+        # Generate schema for each property
+        for prop_name, data in property_data.items():
+            total_appearances = data['null_count'] + data['non_null_count']
+            null_percentage = (data['null_count'] / total_appearances * 100) if total_appearances > 0 else 0
+            
+            # Determine primary type
+            if data['types']:
+                primary_type = data['types'].most_common(1)[0][0]
+            else:
+                primary_type = 'NoneType'
+            
+            # Determine if required (appears in >80% and rarely null)
+            is_required = (total_appearances >= len(type_samples) * 0.8 and null_percentage < 10)
+            
+            schema['properties'][prop_name] = {
+                'python_type': primary_type,
+                'nullable': null_percentage > 0,
+                'null_percentage': round(null_percentage, 2),
+                'appearances': total_appearances,
+                'coverage': round(total_appearances / len(type_samples) * 100, 2),
+                'sample_values': data['sample_values'][:3]
+            }
+            
+            if is_required:
+                schema['required_fields'].add(prop_name)
+            else:
+                schema['optional_fields'].add(prop_name)
+        
+        # Convert sets to lists for JSON serialization
+        schema['required_fields'] = sorted(list(schema['required_fields']))
+        schema['optional_fields'] = sorted(list(schema['optional_fields']))
+        
+        self.schemas[resource_type] = schema
+        return schema
+    
+    def generate_pydantic_model(self, resource_type: str) -> str:
+        """Generate Pydantic model code for a resource type.
+        
+        Args:
+            resource_type: Azure resource type
+        
+        Returns:
+            Python code string for Pydantic model
+        """
+        if resource_type not in self.schemas:
+            self.analyze_resources(resource_type)
+        
+        schema = self.schemas.get(resource_type)
+        if not schema:
+            return f"# No schema available for {resource_type}"
+        
+        # Generate class name from resource type
+        class_name = self._resource_type_to_class_name(resource_type)
+        
+        # Build model code
+        lines = [
+            'from pydantic import BaseModel, Field',
+            'from typing import Optional, Any, List, Dict',
+            'from datetime import datetime',
+            '',
+            '',
+            f'class {class_name}Properties(BaseModel):',
+            f'    """Properties for {resource_type}."""',
+            ''
+        ]
+        
+        # Add fields
+        for prop_name, prop_info in sorted(schema['properties'].items()):
+            field_name = self._sanitize_field_name(prop_name)
+            python_type = self._python_type_to_annotation(prop_info['python_type'])
+            
+            # Make optional if nullable or not required
+            if prop_info['nullable'] or prop_name in schema['optional_fields']:
+                type_annotation = f"Optional[{python_type}]"
+                default = " = None"
+            else:
+                type_annotation = python_type
+                default = ""
+            
+            # Add docstring as comment
+            coverage = prop_info['coverage']
+            lines.append(f"    {field_name}: {type_annotation}{default}  # Coverage: {coverage}%")
+        
+        return '\n'.join(lines)
+    
+    def export_schemas(self, output_file: str):
+        """Export all generated schemas to a Python module.
+        
+        Args:
+            output_file: Path to output .py file
+        """
+        with open(output_file, 'w') as f:
+            f.write('"""Auto-generated Pydantic schemas from Azure discovery."""\n\n')
+            f.write('# Generated: {}\n'.format(datetime.now().isoformat()))
+            f.write('# WARNING: This file is auto-generated. Do not edit manually.\n\n')
+            
+            for resource_type in sorted(self.schemas.keys()):
+                model_code = self.generate_pydantic_model(resource_type)
+                f.write(model_code)
+                f.write('\n\n\n')
+        
+        logger.info(f"Exported {len(self.schemas)} schemas to {output_file}")
+    
+    def get_coverage_report(self) -> Dict[str, Any]:
+        """Get coverage statistics for all analyzed schemas.
+        
+        Returns:
+            Dictionary with coverage statistics
+        """
+        report = {
+            'total_types': len(self.schemas),
+            'types': {}
+        }
+        
+        for resource_type, schema in self.schemas.items():
+            report['types'][resource_type] = {
+                'sample_count': schema['sample_count'],
+                'total_properties': len(schema['properties']),
+                'required_properties': len(schema['required_fields']),
+                'optional_properties': len(schema['optional_fields']),
+                'avg_coverage': round(
+                    sum(p['coverage'] for p in schema['properties'].values()) / 
+                    len(schema['properties']) if schema['properties'] else 0,
+                    2
+                )
+            }
+        
+        return report
+    
+    @staticmethod
+    def _resource_type_to_class_name(resource_type: str) -> str:
+        """Convert resource type to Python class name.
         
         Args:
             resource_type: Azure resource type (e.g., 'Microsoft.Compute/virtualMachines')
-            sample_nodes: List of ResourceNode samples from discovery
-            min_coverage: Minimum percentage of samples that must contain a field
         
         Returns:
-            Dynamically generated Pydantic model class
+            Python class name (e.g., 'VirtualMachine')
         """
-        if not sample_nodes:
-            raise ValueError(f"No samples provided for {resource_type}")
-        
-        # Aggregate property statistics from samples
-        property_stats = defaultdict(lambda: {'types': [], 'values': [], 'count': 0})
-        
-        for node in sample_nodes:
-            if node.type == resource_type:
-                props = getattr(node, 'properties', None) or {}
-                for key, value in props.items():
-                    property_stats[key]['types'].append(type(value))
-                    property_stats[key]['values'].append(value)
-                    property_stats[key]['count'] += 1
-        
-        # Build field definitions
-        fields = {}
-        for prop_name, stats in property_stats.items():
-            # Include field if it appears in min_coverage% of samples
-            coverage = stats['count'] / len(sample_nodes)
-            if coverage >= min_coverage:
-                field_type = self._infer_type(stats['types'], stats['values'])
-                
-                # Make optional if not present in all samples
-                if coverage < 1.0:
-                    field_type = Optional[field_type]
-                    fields[prop_name] = (field_type, Field(default=None))
-                else:
-                    fields[prop_name] = (field_type, Field(...))
-        
-        # Generate dynamic Pydantic model
-        schema_name = self._generate_schema_name(resource_type)
-        return create_model(schema_name, **fields)
-    
-    def _generate_schema_name(self, resource_type: str) -> str:
-        """Generate valid Python class name from resource type.
-        
-        Args:
-            resource_type: Azure resource type
-        
-        Returns:
-            Valid class name
-        """
-        # Convert Microsoft.Compute/virtualMachines -> MicrosoftComputeVirtualMachinesProperties
-        name = resource_type.replace('/', '_').replace('.', '_').replace('-', '_')
-        # Title case each part
-        parts = name.split('_')
-        name = ''.join(p.capitalize() for p in parts if p)
-        return f"{name}Properties"
-    
-    def _infer_type(self, type_samples: List[type], value_samples: List[Any]) -> type:
-        """Infer Python type from sample values.
-        
-        Handles type conflicts by choosing most specific common type.
-        
-        Args:
-            type_samples: List of types observed
-            value_samples: List of actual values
-        
-        Returns:
-            Python type annotation
-        """
-        # Filter out None values
-        non_none_types = [t for t, v in zip(type_samples, value_samples) if v is not None]
-        
-        if not non_none_types:
-            return Any
-        
-        type_counts = Counter(non_none_types)
-        most_common_type = type_counts.most_common(1)[0][0]
-        
-        # Type mapping
-        if most_common_type == bool:
-            return bool
-        elif most_common_type == int:
-            # Could be int or float if mixed
-            if float in type_counts:
-                return float
-            return int
-        elif most_common_type == float:
-            return float
-        elif most_common_type == list:
-            # Try to infer list element type
-            list_elements = [item for v in value_samples if isinstance(v, list) for item in v]
-            if list_elements:
-                element_type = self._infer_type(
-                    [type(e) for e in list_elements],
-                    list_elements
-                )
-                return List[element_type]
-            return List[Any]
-        elif most_common_type == dict:
-            return Dict[str, Any]
-        else:
-            return str
-    
-    def generate_all_schemas(
-        self,
-        nodes: List[Any],
-        output_dir: Path,
-        min_samples: int = 3
-    ) -> Dict[str, Type[BaseModel]]:
-        """Generate schema modules for all discovered resource types.
-        
-        Args:
-            nodes: List of ResourceNode objects
-            output_dir: Directory to write schema modules
-            min_samples: Minimum samples required to generate schema
-        
-        Returns:
-            Dict mapping resource type to generated schema class
-        """
-        # Group nodes by type
-        by_type = defaultdict(list)
-        for node in nodes:
-            # Skip Entra ID graph resources
-            if hasattr(node, 'id') and not str(node.id).startswith('graph://'):
-                by_type[node.type].append(node)
-        
-        generated_schemas = {}
-        
-        # Generate schema for each type
-        for resource_type, samples in by_type.items():
-            if len(samples) < min_samples:
-                logger.debug(f"Skipping {resource_type}: only {len(samples)} samples (need {min_samples})")
-                continue
-            
-            try:
-                schema = self.generate_resource_schema(resource_type, samples)
-                generated_schemas[resource_type] = schema
-                
-                # Write to module
-                provider = resource_type.split('/')[0].replace('.', '_').lower()
-                module_path = output_dir / f"{provider}_schemas.py"
-                
-                self._write_schema_module(module_path, resource_type, schema)
-                
-                logger.info(f"Generated schema for {resource_type} ({len(samples)} samples)")
-                
-            except Exception as e:
-                logger.error(f"Failed to generate schema for {resource_type}: {str(e)}")
-        
-        return generated_schemas
-    
-    def _write_schema_module(self, path: Path, resource_type: str, schema: Type[BaseModel]):
-        """Write Pydantic schema to Python module.
-        
-        Args:
-            path: Path to module file
-            resource_type: Azure resource type
-            schema: Generated Pydantic model
-        """
-        path.parent.mkdir(parents=True, exist_ok=True)
-        
-        # Check if file exists to append or create
-        mode = 'a' if path.exists() else 'w'
-        
-        with open(path, mode) as f:
-            if mode == 'w':
-                # Write header for new file
-                f.write('"""Auto-generated schemas from Azure Discovery data."""\n\n')
-                f.write('from typing import Optional, List, Dict, Any\n')
-                f.write('from pydantic import BaseModel, Field\n\n')
-            
-            # Write schema class
-            f.write(f"\n# {resource_type}\n")
-            f.write(f"class {schema.__name__}(BaseModel):\n")
-            f.write(f'    """Properties for {resource_type}."""\n\n')
-            
-            if not schema.__fields__:
-                f.write('    pass\n')
-            else:
-                for field_name, field_info in schema.__fields__.items():
-                    # Get type annotation as string
-                    annotation = field_info.annotation
-                    type_str = self._type_to_string(annotation)
-                    
-                    # Check if field has default
-                    if field_info.default is None:
-                        f.write(f"    {field_name}: {type_str} = None\n")
-                    elif field_info.is_required():
-                        f.write(f"    {field_name}: {type_str}\n")
-                    else:
-                        f.write(f"    {field_name}: {type_str} = Field(default=None)\n")
-            
-            f.write('\n')
-    
-    def _type_to_string(self, annotation) -> str:
-        """Convert type annotation to string representation.
-        
-        Args:
-            annotation: Type annotation
-        
-        Returns:
-            String representation
-        """
-        # Handle Optional types
-        if hasattr(annotation, '__origin__'):
-            origin = annotation.__origin__
-            
-            if origin is type(Optional[int]):
-                # Optional[X] -> Optional[X]
-                args = annotation.__args__
-                inner = self._type_to_string(args[0]) if args else 'Any'
-                return f"Optional[{inner}]"
-            
-            elif origin is list:
-                args = annotation.__args__
-                inner = self._type_to_string(args[0]) if args else 'Any'
-                return f"List[{inner}]"
-            
-            elif origin is dict:
-                return "Dict[str, Any]"
-        
-        # Simple types
-        if annotation == str:
-            return "str"
-        elif annotation == int:
-            return "int"
-        elif annotation == float:
-            return "float"
-        elif annotation == bool:
-            return "bool"
-        elif annotation == Any:
-            return "Any"
-        
-        # Fallback
-        return str(annotation).replace('typing.', '')
-    
-    def export_schema_summary(self, schemas: Dict[str, Type[BaseModel]], output_path: Path):
-        """Export summary of generated schemas.
-        
-        Args:
-            schemas: Dict of resource type to schema
-            output_path: Path to write summary JSON
-        """
-        import json
-        
-        summary = {
-            'total_schemas': len(schemas),
-            'schemas': {}
-        }
-        
-        for resource_type, schema in schemas.items():
-            summary['schemas'][resource_type] = {
-                'class_name': schema.__name__,
-                'field_count': len(schema.__fields__),
-                'fields': {
-                    name: {
-                        'type': self._type_to_string(field.annotation),
-                        'required': field.is_required()
-                    }
-                    for name, field in schema.__fields__.items()
-                }
-            }
-        
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_path, 'w') as f:
-            json.dump(summary, f, indent=2)
-        
-        logger.info(f"Exported schema summary to {output_path}")
-
-
-class SchemaGeneratorFactory:
-    """Factory for creating SchemaGenerator and generating from various sources."""
+        # Extract the last part after /
+        name = resource_type.split('/')[-1]
+        # Convert to PascalCase
+        parts = re.findall(r'[A-Z][a-z]*|[a-z]+', name)
+        return ''.join(part.capitalize() for part in parts)
     
     @staticmethod
-    def from_snapshot(
-        snapshot_path: str,
-        output_dir: str,
-        min_samples: int = 3
-    ) -> Dict[str, Type[BaseModel]]:
-        """Generate schemas from snapshot file.
+    def _sanitize_field_name(field_name: str) -> str:
+        """Convert field name to valid Python identifier.
         
         Args:
-            snapshot_path: Path to snapshot JSON
-            output_dir: Directory for generated schemas
-            min_samples: Minimum samples per type
+            field_name: Original field name
         
         Returns:
-            Dict of generated schemas
+            Valid Python identifier
         """
-        from pathlib import Path
-        from ..scenarios.snapshot_manager import SnapshotManager
+        # Replace invalid characters with underscore
+        sanitized = re.sub(r'[^a-zA-Z0-9_]', '_', field_name)
+        # Ensure doesn't start with number
+        if sanitized[0].isdigit():
+            sanitized = 'field_' + sanitized
+        return sanitized
+    
+    @staticmethod
+    def _python_type_to_annotation(python_type: str) -> str:
+        """Convert Python type name to type annotation.
         
-        # Load snapshot
-        manager = SnapshotManager()
-        nodes, _ = manager.load_snapshot(Path(snapshot_path))
+        Args:
+            python_type: Python type name (e.g., 'dict', 'list')
         
-        # Generate schemas
-        generator = SchemaGenerator()
-        schemas = generator.generate_all_schemas(
-            nodes,
-            Path(output_dir),
-            min_samples=min_samples
-        )
-        
-        # Export summary
-        summary_path = Path(output_dir) / 'schema_summary.json'
-        generator.export_schema_summary(schemas, summary_path)
-        
-        return schemas
+        Returns:
+            Type annotation string
+        """
+        type_map = {
+            'dict': 'Dict[str, Any]',
+            'list': 'List[Any]',
+            'str': 'str',
+            'int': 'int',
+            'float': 'float',
+            'bool': 'bool',
+            'NoneType': 'Any'
+        }
+        return type_map.get(python_type, 'Any')
