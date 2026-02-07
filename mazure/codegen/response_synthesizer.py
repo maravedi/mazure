@@ -1,11 +1,11 @@
-"""Response synthesizer for generating realistic Azure resources.
+"""Response synthesis from discovery patterns.
 
-Analyzes patterns from discovery data to generate statistically realistic
-mock resources for testing.
+Generates realistic mock resources based on statistical analysis
+of historical discovery data.
 """
 
 from collections import Counter, defaultdict
-from typing import List, Dict, Any, Optional
+from typing import Dict, Any, List, Optional, Set
 import random
 import logging
 
@@ -33,26 +33,37 @@ class ResponseSynthesizer:
         
         if historical_nodes:
             self._analyze_patterns()
-            logger.info(f"Analyzed {len(historical_nodes)} resources across {len(self.type_counts)} types")
+        else:
+            logger.warning("No historical data provided for synthesis")
     
     def _analyze_patterns(self):
         """Analyze patterns in discovered resources."""
+        logger.info(f"Analyzing patterns from {len(self.nodes)} resources")
+        
         # Resource type frequency
-        self.type_counts = Counter(n.type for n in self.nodes)
+        self.type_counts = Counter(getattr(n, 'type', None) for n in self.nodes)
         
         # Location distribution per type
         self.location_distribution = {}
         for node in self.nodes:
-            if node.type not in self.location_distribution:
-                self.location_distribution[node.type] = Counter()
-            if hasattr(node, 'location') and node.location:
-                self.location_distribution[node.type][node.location] += 1
+            node_type = getattr(node, 'type', None)
+            node_location = getattr(node, 'location', None)
+            
+            if node_type and node_location:
+                if node_type not in self.location_distribution:
+                    self.location_distribution[node_type] = Counter()
+                self.location_distribution[node_type][node_location] += 1
         
         # Tag patterns
         self.tag_patterns = self._extract_tag_patterns()
         
         # Property patterns per type
         self.property_patterns = self._extract_property_patterns()
+        
+        logger.info(
+            f"Analyzed {len(self.nodes)} resources across "
+            f"{len(self.type_counts)} types"
+        )
     
     def _extract_tag_patterns(self) -> Dict[str, Dict[str, List[str]]]:
         """Extract common tag keys and value patterns per resource type.
@@ -63,17 +74,22 @@ class ResponseSynthesizer:
         patterns = {}
         
         for node in self.nodes:
-            if node.type not in patterns:
-                patterns[node.type] = {}
+            node_type = getattr(node, 'type', None)
+            node_tags = getattr(node, 'tags', None)
             
-            tags = getattr(node, 'tags', None) or {}
-            for key, value in tags.items():
+            if not node_type or not node_tags:
+                continue
+            
+            if node_type not in patterns:
+                patterns[node_type] = {}
+            
+            for key, value in node_tags.items():
                 if key.startswith('_'):  # Skip internal tags
                     continue
-                if key not in patterns[node.type]:
-                    patterns[node.type][key] = []
-                if value and value not in patterns[node.type][key]:
-                    patterns[node.type][key].append(str(value))
+                if key not in patterns[node_type]:
+                    patterns[node_type][key] = []
+                if value and value not in patterns[node_type][key]:
+                    patterns[node_type][key].append(value)
         
         return patterns
     
@@ -86,25 +102,30 @@ class ResponseSynthesizer:
         patterns = {}
         
         for node in self.nodes:
-            if node.type not in patterns:
-                patterns[node.type] = {}
+            node_type = getattr(node, 'type', None)
+            node_props = getattr(node, 'properties', None)
             
-            props = getattr(node, 'properties', None) or {}
-            for key, value in props.items():
-                if key not in patterns[node.type]:
-                    patterns[node.type][key] = {
+            if not node_type or not node_props:
+                continue
+            
+            if node_type not in patterns:
+                patterns[node_type] = {}
+            
+            for key, value in node_props.items():
+                if key not in patterns[node_type]:
+                    patterns[node_type][key] = {
                         'type': type(value).__name__,
                         'values': [],
                         'null_count': 0
                     }
                 
                 if value is None:
-                    patterns[node.type][key]['null_count'] += 1
+                    patterns[node_type][key]['null_count'] += 1
                 else:
                     # Store sample values (up to 10 unique)
-                    if len(patterns[node.type][key]['values']) < 10:
-                        if value not in patterns[node.type][key]['values']:
-                            patterns[node.type][key]['values'].append(value)
+                    if len(patterns[node_type][key]['values']) < 10:
+                        if value not in patterns[node_type][key]['values']:
+                            patterns[node_type][key]['values'].append(value)
         
         return patterns
     
@@ -129,11 +150,20 @@ class ResponseSynthesizer:
             Dict representing a realistic ARM resource
         """
         # Find similar resources as templates
-        similar = [n for n in self.nodes if n.type == resource_type]
+        similar = [
+            n for n in self.nodes 
+            if getattr(n, 'type', None) == resource_type
+        ]
         
         if not similar:
-            logger.warning(f"No examples found for {resource_type}. Generating minimal resource.")
-            return self._generate_minimal_resource(resource_type, name, location)
+            logger.warning(
+                f"No examples found for {resource_type}. "
+                f"Generating minimal resource."
+            )
+            return self._generate_minimal_resource(
+                resource_type, name, location,
+                override_properties, override_tags
+            )
         
         # Pick a template resource
         template = random.choice(similar)
@@ -146,7 +176,7 @@ class ResponseSynthesizer:
                     # Use observed value
                     properties[prop_key] = random.choice(pattern_info['values'])
                 elif pattern_info['type'] == 'str':
-                    properties[prop_key] = f"mock-{prop_key}-{random.randint(1000, 9999)}"
+                    properties[prop_key] = f"mock-{prop_key}"
                 elif pattern_info['type'] == 'int':
                     properties[prop_key] = random.randint(1, 100)
                 elif pattern_info['type'] == 'bool':
@@ -162,10 +192,13 @@ class ResponseSynthesizer:
         
         # Pick realistic location
         if not location:
-            if resource_type in self.location_distribution and self.location_distribution[resource_type]:
-                locations = list(self.location_distribution[resource_type].keys())
-                weights = list(self.location_distribution[resource_type].values())
-                location = random.choices(locations, weights=weights, k=1)[0]
+            if (resource_type in self.location_distribution and 
+                self.location_distribution[resource_type]):
+                location = random.choices(
+                    list(self.location_distribution[resource_type].keys()),
+                    weights=list(self.location_distribution[resource_type].values()),
+                    k=1
+                )[0]
             else:
                 location = 'eastus'  # Default fallback
         
@@ -174,7 +207,7 @@ class ResponseSynthesizer:
         if resource_type in self.tag_patterns:
             for tag_key, values in self.tag_patterns[resource_type].items():
                 if random.random() < 0.7:  # 70% chance to include each tag
-                    tags[tag_key] = random.choice(values) if values else f"value-{tag_key}"
+                    tags[tag_key] = random.choice(values)
         
         # Apply tag overrides
         if override_tags:
@@ -183,14 +216,10 @@ class ResponseSynthesizer:
         # Generate name if not provided
         if not name:
             template_name = getattr(template, 'name', 'resource')
-            prefix = template_name.split('-')[0] if '-' in template_name else template_name[:3]
+            prefix = template_name.split('-')[0] if '-' in template_name else template_name
             name = f"{prefix}-{random.randint(1000, 9999)}"
         
-        # Build resource ID
-        resource_id = self._generate_resource_id(resource_type, name)
-        
         return {
-            'id': resource_id,
             'type': resource_type,
             'name': name,
             'location': location,
@@ -202,57 +231,18 @@ class ResponseSynthesizer:
         self,
         resource_type: str,
         name: Optional[str],
-        location: Optional[str]
+        location: Optional[str],
+        override_properties: Optional[Dict[str, Any]],
+        override_tags: Optional[Dict[str, str]]
     ) -> Dict[str, Any]:
-        """Generate minimal resource when no templates available.
-        
-        Args:
-            resource_type: Resource type
-            name: Resource name
-            location: Azure region
-        
-        Returns:
-            Minimal resource dictionary
-        """
-        name = name or f"mock-resource-{random.randint(1000, 9999)}"
-        location = location or 'eastus'
-        resource_id = self._generate_resource_id(resource_type, name)
-        
+        """Generate minimal resource when no examples available."""
         return {
-            'id': resource_id,
             'type': resource_type,
-            'name': name,
-            'location': location,
-            'properties': {},
-            'tags': {'generated': 'true', 'source': 'synthesizer'}
+            'name': name or f"mock-{resource_type.split('/')[-1].lower()}-{random.randint(1000, 9999)}",
+            'location': location or 'eastus',
+            'properties': override_properties or {},
+            'tags': override_tags or {}
         }
-    
-    def _generate_resource_id(
-        self,
-        resource_type: str,
-        name: str,
-        subscription_id: str = 'mock-subscription',
-        resource_group: str = 'mock-rg'
-    ) -> str:
-        """Generate ARM resource ID.
-        
-        Args:
-            resource_type: Resource type
-            name: Resource name
-            subscription_id: Subscription ID
-            resource_group: Resource group name
-        
-        Returns:
-            ARM resource ID string
-        """
-        provider = resource_type.split('/')[0]
-        resource_kind = resource_type.split('/')[1] if '/' in resource_type else 'resources'
-        
-        return (
-            f"/subscriptions/{subscription_id}"
-            f"/resourceGroups/{resource_group}"
-            f"/providers/{provider}/{resource_kind}/{name}"
-        )
     
     def synthesize_batch(
         self,
@@ -270,18 +260,10 @@ class ResponseSynthesizer:
         Returns:
             List of resource dictionaries
         """
-        resources = []
-        for i in range(count):
-            # Ensure unique names
-            if 'name' not in kwargs:
-                kwargs_copy = kwargs.copy()
-                kwargs_copy['name'] = None  # Let synthesizer generate unique name
-                resource = self.synthesize_resource(resource_type, **kwargs_copy)
-            else:
-                resource = self.synthesize_resource(resource_type, **kwargs)
-            resources.append(resource)
-        
-        return resources
+        return [
+            self.synthesize_resource(resource_type, **kwargs)
+            for _ in range(count)
+        ]
     
     def get_statistics(self) -> Dict[str, Any]:
         """Get statistics about learned patterns.
@@ -289,10 +271,6 @@ class ResponseSynthesizer:
         Returns:
             Dict with pattern statistics
         """
-        all_locations = set()
-        for dist in self.location_distribution.values():
-            all_locations.update(dist.keys())
-        
         return {
             'total_resources': len(self.nodes),
             'resource_types': dict(self.type_counts.most_common()),
@@ -300,90 +278,38 @@ class ResponseSynthesizer:
                 rt: list(tags.keys())
                 for rt, tags in self.tag_patterns.items()
             },
-            'locations': sorted(list(all_locations)),
-            'properties_per_type': {
-                rt: len(props)
-                for rt, props in self.property_patterns.items()
-            }
+            'locations': sorted(set(
+                loc
+                for dist in self.location_distribution.values()
+                for loc in dist.keys()
+            )),
+            'types_with_patterns': len(self.property_patterns)
         }
     
-    def export_patterns(self, output_path: str):
-        """Export learned patterns to JSON file for inspection.
+    def get_common_locations_for_type(self, resource_type: str) -> List[str]:
+        """Get most common locations for a resource type.
         
         Args:
-            output_path: Path to write JSON file
-        """
-        import json
-        from pathlib import Path
-        
-        patterns = {
-            'statistics': self.get_statistics(),
-            'location_distribution': {
-                rt: dict(dist)
-                for rt, dist in self.location_distribution.items()
-            },
-            'tag_patterns': self.tag_patterns,
-            'property_patterns': self.property_patterns
-        }
-        
-        output_file = Path(output_path)
-        output_file.parent.mkdir(parents=True, exist_ok=True)
-        
-        with open(output_file, 'w') as f:
-            json.dump(patterns, f, indent=2, default=str)
-        
-        logger.info(f"Exported patterns to {output_path}")
-
-
-class ResponseSynthesizerFactory:
-    """Factory for creating ResponseSynthesizer instances from various sources."""
-    
-    @staticmethod
-    def from_snapshot(snapshot_path: str) -> ResponseSynthesizer:
-        """Create synthesizer from snapshot file.
-        
-        Args:
-            snapshot_path: Path to snapshot JSON file
+            resource_type: Azure resource type
         
         Returns:
-            ResponseSynthesizer instance
+            List of locations ordered by frequency
         """
-        from pathlib import Path
-        from ..scenarios.snapshot_manager import SnapshotManager
+        if resource_type not in self.location_distribution:
+            return ['eastus', 'westus2', 'centralus']  # Defaults
         
-        manager = SnapshotManager()
-        nodes, _ = manager.load_snapshot(Path(snapshot_path))
-        
-        return ResponseSynthesizer(nodes)
+        return [
+            loc for loc, _ in 
+            self.location_distribution[resource_type].most_common()
+        ]
     
-    @staticmethod
-    def from_state_manager(state_manager) -> ResponseSynthesizer:
-        """Create synthesizer from current state.
+    def get_common_tags_for_type(self, resource_type: str) -> Dict[str, List[str]]:
+        """Get common tags for a resource type.
         
         Args:
-            state_manager: StateManager instance
+            resource_type: Azure resource type
         
         Returns:
-            ResponseSynthesizer instance
+            Dict mapping tag keys to possible values
         """
-        try:
-            from ..core.state import GenericResource
-            
-            # Convert GenericResource objects to node-like objects
-            resources = GenericResource.objects.all()
-            
-            # Create simple node objects
-            class SimpleNode:
-                def __init__(self, resource):
-                    self.type = resource.resource_type
-                    self.name = resource.name
-                    self.location = resource.location
-                    self.properties = resource.properties
-                    self.tags = resource.tags
-            
-            nodes = [SimpleNode(r) for r in resources]
-            return ResponseSynthesizer(nodes)
-            
-        except Exception as e:
-            logger.warning(f"Failed to load from state manager: {str(e)}")
-            return ResponseSynthesizer([])
+        return self.tag_patterns.get(resource_type, {})
